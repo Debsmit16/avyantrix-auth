@@ -21,7 +21,9 @@ function getTransporter() {
   });
 }
 
-const FROM_HEADER = process.env.SMTP_FROM || "Avyantrix Identity <no-reply@avyantrix.com>";
+function getFromHeader() {
+  return process.env.SMTP_FROM || `Avyantrix ID <${process.env.SMTP_USER || "hello@avyantrix.com"}>`;
+}
 
 export async function sendVerificationEmail(to: string, name: string, token: string): Promise<boolean> {
   const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`;
@@ -61,7 +63,7 @@ export async function sendVerificationEmail(to: string, name: string, token: str
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: FROM_HEADER,
+      from: getFromHeader(),
       to,
       subject: "Verify your Avyantrix Identity",
       html,
@@ -111,7 +113,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: FROM_HEADER,
+      from: getFromHeader(),
       to,
       subject: "Reset your Avyantrix Password",
       html,
@@ -162,7 +164,7 @@ export async function sendSecurityAlertEmail(
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: FROM_HEADER,
+      from: getFromHeader(),
       to,
       subject: `[Security Alert] ${alertTitle}`,
       html,
