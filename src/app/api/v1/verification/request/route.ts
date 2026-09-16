@@ -1,0 +1,107 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth/rbac";
+import { logSecurityEvent } from "@/lib/auth/audit";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const verificationRequestSchema = z.object({
+  category: z.enum(["IDENTITY", "EDUCATION", "CAPABILITY_BUILDER", "PROBLEM_OWNER"]),
+  notes: z.string().max(2000).optional(),
+  evidence: z.array(
+    z.object({
+      evidenceType: z.enum([
+        "GITHUB_REPO",
+        "DEPLOYED_URL",
+        "PORTFOLIO",
+        "CERTIFICATE",
+        "RESEARCH_PAPER",
+        "CREDENTIAL_LINK",
+        "DOCUMENT_REFERENCE",
+      ]),
+      title: z.string().min(1).max(200),
+      evidenceUrl: z.string().url().max(500).optional().nullable(),
+      description: z.string().max(1000).optional(),
+    })
+  ).min(1, "At least one evidence item or proof link must be provided."),
+});
+
+export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") || "unknown";
+
+  try {
+    const session = await requireAuth();
+    const body = await req.json();
+    const parseResult = verificationRequestSchema.safeParse(body);
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.errors[0]?.message || "Invalid verification request." },
+        { status: 400 }
+      );
+    }
+
+    const { category, notes, evidence } = parseResult.data;
+
+    // Check if there is already a PENDING request for this category
+    const pendingRequest = await prisma.verificationRequest.findFirst({
+      where: {
+        userId: session.userId,
+        category,
+        status: "PENDING",
+      },
+    });
+
+    if (pendingRequest) {
+      return NextResponse.json(
+        { error: `You already have a pending ${category} verification request under review.` },
+        { status: 409 }
+      );
+    }
+
+    // Create verification request and structured private evidence
+    const request = await prisma.verificationRequest.create({
+      data: {
+        userId: session.userId,
+        category,
+        status: "PENDING",
+        notes,
+        evidence: {
+          create: evidence.map((e) => ({
+            evidenceType: e.evidenceType,
+            title: e.title,
+            evidenceUrl: e.evidenceUrl || null,
+            evidencePayload: e.description ? { description: e.description } : undefined,
+            isPrivate: true, // Strictly private
+          })),
+        },
+      },
+      include: {
+        evidence: true,
+      },
+    });
+
+    await logSecurityEvent({
+      userId: session.userId,
+      eventType: "VERIFICATION_SUBMITTED",
+      ipAddress: ip,
+      metadata: { requestId: request.id, category },
+    });
+
+    return NextResponse.json(
+      {
+        message: "Verification request submitted successfully. The Avyantrix review team will assess your submission.",
+        request,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Verification submit error:", (error as Error).message);
+    return NextResponse.json(
+      { error: (error as Error).message || "Failed to submit verification request." },
+      { status: 500 }
+    );
+  }
+}

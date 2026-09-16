@@ -1,0 +1,344 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+  DELETED
+}
+
+enum VerificationCategory {
+  IDENTITY
+  EMAIL
+  EDUCATION
+  CAPABILITY_BUILDER
+  PROBLEM_OWNER
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum EvidenceType {
+  GITHUB_REPO
+  DEPLOYED_URL
+  PORTFOLIO
+  CERTIFICATE
+  RESEARCH_PAPER
+  CREDENTIAL_LINK
+  DOCUMENT_REFERENCE
+}
+
+model User {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  email                String                 @unique
+  emailVerified        Boolean                @default(false)
+  passwordHash         String?                // Argon2id hash only (null for OAuth-only users)
+  status               UserStatus             @default(ACTIVE)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  deletedAt            DateTime?
+
+  accounts             Account[]
+  sessions             Session[]
+  profile              UserProfile?
+  userRoles            UserRole[]
+  userSkills           UserSkill[]
+  verificationRequests VerificationRequest[]
+  verificationBadges   VerificationBadge[]
+  verificationTokens   VerificationToken[]
+  loginEvents          LoginEvent[]
+  securityEvents       SecurityEvent[]
+
+  @@index([email])
+  @@index([status])
+  @@map("users")
+}
+
+model Account {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @db.Uuid
+  provider          String   // 'google', 'github'
+  providerAccountId String
+  providerEmail     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  sessionToken String   @unique // SHA-256 hash of random token
+  ipAddress    String?  @db.VarChar(45)
+  userAgent    String?  @db.Text
+  deviceInfo   String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+  @@index([userId])
+  @@map("sessions")
+}
+
+model UserProfile {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @unique @db.Uuid
+  username           String   @unique @db.VarChar(50)
+  firstName          String   @db.VarChar(100)
+  lastName           String   @db.VarChar(100)
+  avatarUrl          String?  @db.Text
+  headline           String?  @db.VarChar(200)
+  bio                String?  @db.Text
+  location           String?  @db.VarChar(100)
+  collegeUniversity  String?  @db.VarChar(200)
+  graduationYear     Int?
+  currentStatus      String?  @db.VarChar(100) // 'Student', 'Engineer', 'Researcher', 'Founder'
+  linkedinUrl        String?  @db.Text
+  githubUrl          String?  @db.Text
+  portfolioUrl       String?  @db.Text
+  visibilitySettings Json     @default("{\"show_email\":false,\"show_education\":true,\"show_location\":true,\"show_links\":true}")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([username])
+  @@map("user_profiles")
+}
+
+model Role {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @unique @db.VarChar(50) // 'BUILDER', 'PROBLEM_OWNER', 'CHALLENGE_ORGANIZER', 'MENTOR', 'ADMIN'
+  description String?          @db.Text
+  createdAt   DateTime         @default(now())
+
+  userRoles   UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @unique @db.VarChar(100) // e.g. 'user.read', 'verification.review', 'problem.create'
+  description String?          @db.Text
+
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId     String   @db.Uuid
+  roleId     String   @db.Uuid
+  assignedAt DateTime @default(now())
+  assignedBy String?  @db.Uuid
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Skill {
+  id         String      @id @default(uuid()) @db.Uuid
+  name       String      @unique @db.VarChar(100)
+  category   String      @db.VarChar(50) // 'Embedded Hardware', 'AI/ML', 'Systems', 'Biomedical', 'Product'
+
+  userSkills UserSkill[]
+
+  @@map("skills")
+}
+
+model UserSkill {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  skillId          String   @db.Uuid
+  proficiencyLevel String   @default("INTERMEDIATE") // 'BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'
+  isVerified       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill            Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@map("user_skills")
+}
+
+model VerificationRequest {
+  id          String                 @id @default(uuid()) @db.Uuid
+  userId      String                 @db.Uuid
+  category    VerificationCategory
+  status      VerificationStatus     @default(PENDING)
+  notes       String?                @db.Text
+  reviewerId  String?                @db.Uuid
+  reviewNotes String?                @db.Text
+  reviewedAt  DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  evidence    VerificationEvidence[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("verification_requests")
+}
+
+model VerificationEvidence {
+  id                    String              @id @default(uuid()) @db.Uuid
+  verificationRequestId String              @db.Uuid
+  evidenceType          EvidenceType
+  title                 String              @db.VarChar(200)
+  evidenceUrl           String?             @db.Text
+  evidencePayload       Json?
+  isPrivate             Boolean             @default(true)
+  createdAt             DateTime            @default(now())
+
+  request               VerificationRequest @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
+
+  @@map("verification_evidence")
+}
+
+model VerificationBadge {
+  id         String               @id @default(uuid()) @db.Uuid
+  userId     String               @db.Uuid
+  category   VerificationCategory
+  badgeLabel String               @db.VarChar(100)
+  issuedAt   DateTime             @default(now())
+  expiresAt  DateTime?
+  isActive   Boolean              @default(true)
+
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+  @@map("verification_badges")
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @db.VarChar(255) // SHA-256 hash of token
+  type      String   @db.VarChar(50)  // 'EMAIL_VERIFICATION', 'PASSWORD_RESET', 'ACCOUNT_RECOVERY'
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@map("verification_tokens")
+}
+
+model LoginEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String?  @db.Uuid
+  email         String   @db.VarChar(255)
+  ipAddress     String?  @db.VarChar(45)
+  userAgent     String?  @db.Text
+  status        String   @db.VarChar(50) // 'SUCCESS', 'FAILED'
+  failureReason String?  @db.VarChar(100)
+  createdAt     DateTime @default(now())
+
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([email])
+  @@map("login_events")
+}
+
+model SecurityEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  eventType String   @db.VarChar(100) // 'PASSWORD_CHANGED', 'EMAIL_CHANGED', 'OAUTH_LINKED', 'ROLE_GRANTED', 'VERIFICATION_APPROVED'
+  ipAddress String?  @db.VarChar(45)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([eventType])
+  @@map("security_events")
+}
+
+// Durable Neon PostgreSQL-backed rate limiter across serverless instances
+model RateLimitRecord {
+  key       String   @id @db.VarChar(255) // e.g. "rl:login:192.168.1.1"
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+  @@map("rate_limit_records")
+}
+
+// Registered Avyantrix ecosystem products (Builds, Challenges, Future Apps)
+model OAuthClient {
+  id                 String              @id @default(uuid()) @db.Uuid
+  clientId           String              @unique @db.VarChar(100) // e.g. "avyantrix_builds"
+  clientSecretHash   String?             @db.VarChar(255) // Argon2id hash for confidential clients, null for public/PKCE
+  name               String              @db.VarChar(150) // "Avyantrix Builds"
+  redirectUris       String[]            // e.g. ["https://builds.avyantrix.com/api/auth/callback"]
+  allowedOrigins     String[]            // e.g. ["https://builds.avyantrix.com"]
+  isFirstParty       Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  authorizationCodes AuthorizationCode[]
+
+  @@map("oauth_clients")
+}
+
+// Short-lived (5 min), single-use authorization codes for SSO code exchange
+model AuthorizationCode {
+  id                  String      @id @default(uuid()) @db.Uuid
+  codeHash            String      @unique @db.VarChar(255) // SHA-256 hash of random auth code
+  clientId            String      @db.VarChar(100)
+  userId              String      @db.Uuid
+  redirectUri         String      @db.Text
+  scope               String      @default("openid profile email")
+  codeChallenge       String?     @db.VarChar(255) // For PKCE (S256 mandatory)
+  codeChallengeMethod String?     @default("S256") @db.VarChar(10)  // "S256" exclusively
+  expiresAt           DateTime
+  usedAt              DateTime?
+  createdAt           DateTime    @default(now())
+
+  client              OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([codeHash])
+  @@index([expiresAt])
+  @@map("authorization_codes")
+}
