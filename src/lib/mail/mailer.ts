@@ -22,8 +22,14 @@ function getTransporter() {
 }
 
 function getFromHeader() {
-  return process.env.SMTP_FROM || `Avyantrix ID <${process.env.SMTP_USER || "hello@avyantrix.com"}>`;
+  return process.env.SMTP_FROM || `Avyantrix ID <${process.env.SMTP_USER || "noreply@avyantrix.com"}>`;
 }
+
+const NOREPLY_HEADERS = {
+  "Auto-Submitted": "auto-generated",
+  "X-Auto-Response-Suppress": "All",
+  "Precedence": "bulk",
+};
 
 export async function sendVerificationEmail(to: string, name: string, token: string): Promise<boolean> {
   const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`;
@@ -41,7 +47,7 @@ export async function sendVerificationEmail(to: string, name: string, token: str
     h1 { font-size: 22px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #FFFFFF; }
     p { font-size: 15px; line-height: 1.6; color: #A1A1AA; margin-bottom: 24px; }
     .button { display: inline-block; background-color: #EF4444; color: #FFFFFF; padding: 12px 24px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px; }
-    .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 12px; color: #71717A; }
+    .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 12px; color: #71717A; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -53,6 +59,7 @@ export async function sendVerificationEmail(to: string, name: string, token: str
     <a href="${verifyUrl}" class="button" target="_blank">Verify Email Address</a>
     <p style="margin-top: 24px; font-size: 13px; color: #71717A;">This verification link will expire in 24 hours. If you did not create an account, you can safely ignore this email.</p>
     <div class="footer">
+      <p style="margin: 0 0 8px 0; color: #71717A; font-size: 11px;">Please do not reply to this email. This address is automated and unmonitored. Direct replies cannot be received.</p>
       &copy; ${new Date().getFullYear()} Avyantrix Engineering Collective. All rights reserved.
     </div>
   </div>
@@ -65,6 +72,8 @@ export async function sendVerificationEmail(to: string, name: string, token: str
     await transporter.sendMail({
       from: getFromHeader(),
       to,
+      replyTo: "noreply@avyantrix.com",
+      headers: NOREPLY_HEADERS,
       subject: "Verify your Avyantrix Identity",
       html,
     });
@@ -91,7 +100,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
     h1 { font-size: 22px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #FFFFFF; }
     p { font-size: 15px; line-height: 1.6; color: #A1A1AA; margin-bottom: 24px; }
     .button { display: inline-block; background-color: #EF4444; color: #FFFFFF; padding: 12px 24px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px; }
-    .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 12px; color: #71717A; }
+    .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 12px; color: #71717A; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -103,6 +112,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
     <a href="${resetUrl}" class="button" target="_blank">Reset Password</a>
     <p style="margin-top: 24px; font-size: 13px; color: #71717A;">This link is valid for 1 hour and can only be used once. If you did not request a password reset, your account is safe and no action is required.</p>
     <div class="footer">
+      <p style="margin: 0 0 8px 0; color: #71717A; font-size: 11px;">Please do not reply to this email. This address is automated and unmonitored. Direct replies cannot be received.</p>
       &copy; ${new Date().getFullYear()} Avyantrix Engineering Collective. All rights reserved.
     </div>
   </div>
@@ -115,6 +125,8 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
     await transporter.sendMail({
       from: getFromHeader(),
       to,
+      replyTo: "noreply@avyantrix.com",
+      headers: NOREPLY_HEADERS,
       subject: "Reset your Avyantrix Password",
       html,
     });
@@ -143,7 +155,7 @@ export async function sendSecurityAlertEmail(
     .logo span { color: #EF4444; }
     h1 { font-size: 22px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #EF4444; }
     p { font-size: 15px; line-height: 1.6; color: #A1A1AA; margin-bottom: 24px; }
-    .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 12px; color: #71717A; }
+    .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 12px; color: #71717A; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -154,6 +166,7 @@ export async function sendSecurityAlertEmail(
     <p>${alertDetails}</p>
     <p>If you made this change, you can safely disregard this message. If you did NOT authorize this action, please sign in to <a href="${process.env.NEXT_PUBLIC_APP_URL}/security" style="color:#EF4444;">https://auth.avyantrix.com/security</a> immediately and revoke all active sessions.</p>
     <div class="footer">
+      <p style="margin: 0 0 8px 0; color: #71717A; font-size: 11px;">Please do not reply to this email. This address is automated and unmonitored. Direct replies cannot be received.</p>
       &copy; ${new Date().getFullYear()} Avyantrix Engineering Collective. All rights reserved.
     </div>
   </div>
@@ -166,6 +179,8 @@ export async function sendSecurityAlertEmail(
     await transporter.sendMail({
       from: getFromHeader(),
       to,
+      replyTo: "noreply@avyantrix.com",
+      headers: NOREPLY_HEADERS,
       subject: `[Security Alert] ${alertTitle}`,
       html,
     });
