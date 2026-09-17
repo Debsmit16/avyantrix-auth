@@ -4,6 +4,7 @@ const nextConfig = {
   poweredByHeader: false,
   experimental: {
     cpus: 1,
+    serverComponentsExternalPackages: ["@node-rs/argon2", "argon2", "@prisma/client", "prisma"],
   },
   headers: async () => {
     return [

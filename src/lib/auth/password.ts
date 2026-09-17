@@ -19,9 +19,8 @@ const COMMON_WEAK_PASSWORDS = new Set([
  */
 export async function hashPassword(password: string): Promise<string> {
   return await hash(password, {
-    algorithm: Algorithm.Argon2id,
-    version: Version.V0x13,
-    memoryCost: 65536,
+    algorithm: 2, // Argon2id
+    memoryCost: 65536, // 64 MB
     timeCost: 3,
     parallelism: 1,
     outputLen: 32,
@@ -33,10 +32,7 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export async function verifyPassword(password: string, hashString: string): Promise<boolean> {
   try {
-    return await verify(hashString, password, {
-      algorithm: Algorithm.Argon2id,
-      version: Version.V0x13,
-    });
+    return await verify(hashString, password);
   } catch (error) {
     return false;
   }
