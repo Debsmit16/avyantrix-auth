@@ -44,9 +44,9 @@ function DashboardContent() {
   const [profileData, setProfileData] = useState<any>(null);
   const [fetching, setFetching] = useState(true);
 
-  // Active Role Cockpit view (defaults to query param if valid, or BUILDER)
-  const initialRole = (searchParams.get("role") as ActiveRoleView) || "BUILDER";
-  const [activeRoleView, setActiveRoleView] = useState<ActiveRoleView>(initialRole);
+  // Active Role Cockpit view (defaults to query param if valid, or dynamically determined from user roles)
+  const roleParam = searchParams.get("role") as ActiveRoleView | null;
+  const [activeRoleView, setActiveRoleView] = useState<ActiveRoleView>(roleParam || "BUILDER");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -55,6 +55,19 @@ function DashboardContent() {
     }
 
     if (user) {
+      // If no query param was specified, automatically activate user's primary persona cockpit
+      if (!roleParam) {
+        if (user.roles.includes("CHALLENGE_ORGANIZER")) {
+          setActiveRoleView("CHALLENGE_ORGANIZER");
+        } else if (user.roles.includes("PROBLEM_OWNER")) {
+          setActiveRoleView("PROBLEM_OWNER");
+        } else if (user.roles.includes("MENTOR")) {
+          setActiveRoleView("MENTOR");
+        } else {
+          setActiveRoleView("BUILDER");
+        }
+      }
+
       fetch("/api/v1/me")
         .then((res) => res.json())
         .then((data) => {
@@ -62,7 +75,7 @@ function DashboardContent() {
         })
         .finally(() => setFetching(false));
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, roleParam]);
 
   if (loading || fetching) {
     return (

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { VerificationCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, validatePasswordStrength } from "@/lib/auth/password";
 import { createEmailVerificationToken } from "@/lib/auth/tokens";
@@ -83,12 +84,13 @@ export async function POST(req: NextRequest) {
     // Hash password strictly with Argon2id
     const passwordHash = await hashPassword(password);
 
-    // Get default BUILDER role
-    const builderRole = await prisma.role.findUnique({
-      where: { name: "BUILDER" },
-    });
+    // Get default BUILDER role and intended persona role
+    const [builderRole, intendedRoleRecord] = await Promise.all([
+      prisma.role.findUnique({ where: { name: "BUILDER" } }),
+      intendedRole !== "BUILDER" ? prisma.role.findUnique({ where: { name: intendedRole } }) : null,
+    ]);
 
-    // Create user, profile, and default role in a transaction
+    // Create user, profile, roles, and initial verification request in a transaction
     const user = await prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
         data: {
@@ -108,11 +110,35 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // Always grant baseline BUILDER ecosystem access
       if (builderRole) {
         await tx.userRole.create({
           data: {
             userId: newUser.id,
             roleId: builderRole.id,
+          },
+        });
+      }
+
+      // Grant intended persona role if different from BUILDER
+      if (intendedRoleRecord && intendedRoleRecord.id !== builderRole?.id) {
+        await tx.userRole.create({
+          data: {
+            userId: newUser.id,
+            roleId: intendedRoleRecord.id,
+          },
+        });
+      }
+
+      // If user registered with a specific track (Mentor, Problem Owner, Organizer),
+      // create initial queue entry in verification lineup
+      if (intendedRole !== "BUILDER") {
+        await tx.verificationRequest.create({
+          data: {
+            userId: newUser.id,
+            category: intendedRole as VerificationCategory,
+            status: "PENDING",
+            notes: `[AUTO-INTENT] User registered with primary persona intent: ${intendedRole}. Awaiting verification evidence submission or fast-track administrative approval.`,
           },
         });
       }

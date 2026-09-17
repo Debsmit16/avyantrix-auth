@@ -176,6 +176,35 @@ export default function AdminPage() {
     }
   };
 
+  const handleToggleUserRole = async (targetUserId: string, currentRoles: string[], roleToToggle: string) => {
+    const newRoles = currentRoles.includes(roleToToggle)
+      ? currentRoles.filter((r) => r !== roleToToggle)
+      : [...currentRoles, roleToToggle];
+
+    if (newRoles.length === 0) {
+      alert("A user must have at least one assigned role.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/v1/admin/users/${targetUserId}/roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roles: newRoles }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(data.error || "Failed to update user roles.");
+      } else {
+        setActionSuccess(`Updated roles for user: [${newRoles.join(", ")}]`);
+        loadUsers();
+      }
+    } catch (err) {
+      setActionError("Network error updating roles.");
+    }
+  };
+
   if (loading || !user || !hasRole("ADMIN")) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
@@ -338,12 +367,12 @@ export default function AdminPage() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as StatusFilter)}
-                className="rounded-lg border border-zinc-200 bg-white py-1 px-2.5 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                className="rounded-lg border border-zinc-200 bg-white py-1 px-2.5 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
               >
-                <option value="PENDING">Status: Pending Only</option>
-                <option value="VERIFIED">Status: Approved</option>
-                <option value="REJECTED">Status: Rejected</option>
-                <option value="ALL">Status: All Records</option>
+                <option value="PENDING">Pending Review</option>
+                <option value="VERIFIED">Verified Only</option>
+                <option value="REJECTED">Rejected Only</option>
+                <option value="ALL">All Statuses</option>
               </select>
             </div>
           </div>
@@ -537,7 +566,7 @@ export default function AdminPage() {
                   <tr>
                     <th className="py-3 px-2">User Handle</th>
                     <th className="py-3 px-2">Email / Status</th>
-                    <th className="py-3 px-2">Assigned Roles</th>
+                    <th className="py-3 px-2">Assigned Roles (Click to Toggle)</th>
                     <th className="py-3 px-2">Active Sessions</th>
                     <th className="py-3 px-2 text-right">Moderation</th>
                   </tr>
@@ -564,25 +593,33 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="py-3 px-2">
-                        <div className="flex flex-wrap gap-1">
-                          {u.roles.map((r: string) => (
-                            <span
-                              key={r}
-                              className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold border ${
-                                r === "ADMIN"
-                                  ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"
-                                  : r === "MENTOR"
-                                  ? "border-blue-300 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
-                                  : r === "PROBLEM_OWNER"
-                                  ? "border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
-                                  : r === "CHALLENGE_ORGANIZER"
-                                  ? "border-purple-300 bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-300"
-                                  : "border-zinc-200 text-zinc-600 dark:border-zinc-800 dark:text-zinc-400"
-                              }`}
-                            >
-                              {r}
-                            </span>
-                          ))}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {["BUILDER", "MENTOR", "PROBLEM_OWNER", "CHALLENGE_ORGANIZER", "ADMIN"].map((rName) => {
+                            const isAssigned = u.roles.includes(rName);
+                            return (
+                              <button
+                                key={rName}
+                                onClick={() => handleToggleUserRole(u.id, u.roles, rName)}
+                                title={isAssigned ? `Click to revoke ${rName}` : `Click to grant ${rName}`}
+                                className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-mono font-semibold transition-all border ${
+                                  isAssigned
+                                    ? rName === "ADMIN"
+                                      ? "border-red-500 bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+                                      : rName === "MENTOR"
+                                      ? "border-blue-400 bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                      : rName === "PROBLEM_OWNER"
+                                      ? "border-amber-400 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                      : rName === "CHALLENGE_ORGANIZER"
+                                      ? "border-purple-400 bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                                      : "border-zinc-300 bg-zinc-100 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                                    : "border-dashed border-zinc-300 bg-transparent text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-800 dark:text-zinc-600 dark:hover:text-zinc-400"
+                                }`}
+                              >
+                                {isAssigned ? "✓ " : "+ "}
+                                {rName}
+                              </button>
+                            );
+                          })}
                         </div>
                       </td>
                       <td className="py-3 px-2">{u.activeSessionsCount} active</td>

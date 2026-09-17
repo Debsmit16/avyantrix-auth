@@ -2,17 +2,83 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Shield, CheckCircle2, MapPin, GraduationCap, Github, Linkedin, Globe, Mail, Award, Calendar } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 async function getPublicProfile(username: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com";
   try {
-    const res = await fetch(`${appUrl}/api/v1/users/${username}`, {
-      next: { revalidate: 60 },
+    const normalizedUsername = username.toLowerCase().trim();
+    const profile = await prisma.userProfile.findUnique({
+      where: { username: normalizedUsername },
+      include: {
+        user: {
+          include: {
+            userRoles: {
+              include: {
+                role: true,
+              },
+            },
+            userSkills: {
+              include: {
+                skill: true,
+              },
+            },
+            verificationBadges: {
+              where: { isActive: true },
+            },
+          },
+        },
+      },
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.profile;
+
+    if (!profile || profile.user.status !== "ACTIVE") {
+      return null;
+    }
+
+    const visibility = (profile.visibilitySettings as any) || {
+      show_email: false,
+      show_education: true,
+      show_location: true,
+      show_links: true,
+    };
+
+    return {
+      id: profile.user.id,
+      username: profile.username,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      avatarUrl: profile.avatarUrl,
+      headline: profile.headline,
+      bio: profile.bio,
+      location: visibility.show_location ? profile.location : null,
+      collegeUniversity: visibility.show_education ? profile.collegeUniversity : null,
+      graduationYear: visibility.show_education ? profile.graduationYear : null,
+      currentStatus: profile.currentStatus,
+      email: visibility.show_email ? profile.user.email : null,
+      links: visibility.show_links
+        ? {
+            linkedin: profile.linkedinUrl,
+            github: profile.githubUrl,
+            portfolio: profile.portfolioUrl,
+          }
+        : null,
+      roles: profile.user.userRoles.map((ur) => ur.role.name),
+      skills: profile.user.userSkills.map((us) => ({
+        name: us.skill.name,
+        category: us.skill.category,
+        proficiencyLevel: us.proficiencyLevel,
+        isVerified: us.isVerified,
+      })),
+      verifiedBadges: profile.user.verificationBadges.map((b) => ({
+        category: b.category,
+        badgeLabel: b.badgeLabel,
+        issuedAt: b.issuedAt,
+      })),
+      joinedAt: profile.user.createdAt,
+    };
   } catch (err) {
+    console.error("Public profile fetch error:", err);
     return null;
   }
 }
