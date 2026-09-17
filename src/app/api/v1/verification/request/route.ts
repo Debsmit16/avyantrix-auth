@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { VerificationCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/rbac";
 import { logSecurityEvent } from "@/lib/auth/audit";
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
     const pendingRequest = await prisma.verificationRequest.findFirst({
       where: {
         userId: session.userId,
-        category,
+        category: category as VerificationCategory,
         status: "PENDING",
       },
     });
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
     const request = await prisma.verificationRequest.create({
       data: {
         userId: session.userId,
-        category,
+        category: category as VerificationCategory,
         status: "PENDING",
         notes,
         evidence: {
