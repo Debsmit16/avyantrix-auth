@@ -29,6 +29,8 @@ import {
   Users,
   Lock,
   ArrowUpRight,
+  Inbox,
+  FileCheck2,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
@@ -42,7 +44,7 @@ function DashboardContent() {
   const [profileData, setProfileData] = useState<any>(null);
   const [fetching, setFetching] = useState(true);
 
-  // Active Role Cockpit view (defaults to query param if valid, or first held non-admin role, or BUILDER)
+  // Active Role Cockpit view (defaults to query param if valid, or BUILDER)
   const initialRole = (searchParams.get("role") as ActiveRoleView) || "BUILDER";
   const [activeRoleView, setActiveRoleView] = useState<ActiveRoleView>(initialRole);
 
@@ -73,6 +75,12 @@ function DashboardContent() {
   if (!user) return null;
 
   const isVerifiedForCurrentView = hasRole(activeRoleView);
+
+  // Get matching active badge for current role view if any
+  const currentRoleBadge = profileData?.badges?.find((b: any) => {
+    if (activeRoleView === "BUILDER") return b.category === "CAPABILITY_BUILDER";
+    return b.category === activeRoleView;
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
@@ -484,89 +492,77 @@ function DashboardContent() {
                 <div>
                   <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                     <GraduationCap className="h-5 w-5 text-blue-500" />
-                    Mentor Advisory Queue & Code Reviews
+                    Mentor Solution Review Desk
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Technical solutions and architecture plans submitted by builders for your review
+                    Technical prototype reviews and advisory requests assigned to you
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
-                <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-zinc-900 dark:text-white block">
-                      TinyML Spirometry Firmware Architecture Review
-                    </span>
-                    <span className="text-[11px] text-zinc-500">
-                      Submitted by @alex_embedded &bull; Target: Avyantrix Medical Sprint
-                    </span>
-                  </div>
-                  <button className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
-                    Open Review
-                  </button>
-                </div>
-
-                <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-zinc-900 dark:text-white block">
-                      FPGA Memory Controller Timing Closure
-                    </span>
-                    <span className="text-[11px] text-zinc-500">
-                      Submitted by @sarah_systems &bull; Target: Venture Prototype
-                    </span>
-                  </div>
-                  <button className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
-                    Open Review
-                  </button>
-                </div>
+              <div className="mt-6 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
+                <Inbox className="mx-auto h-8 w-8 text-zinc-400" />
+                <h4 className="text-xs font-bold text-zinc-900 dark:text-white mt-2">
+                  No Pending Reviews
+                </h4>
+                <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                  When builder teams submit code repositories or hardware prototypes for mentor evaluation, they will appear here.
+                </p>
+                <a
+                  href="https://builds.avyantrix.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  Explore Active Venture Builds <ArrowUpRight className="h-3.5 w-3.5" />
+                </a>
               </div>
             </div>
 
-            {/* Office Hours & Advisory Domains */}
+            {/* Office Hours & Advisory Channels */}
             <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-blue-500" />
-                Advisory Office Hours & Availability
+                Office Hours & Advisory Settings
               </h2>
               <p className="text-xs text-zinc-500 mt-1">
-                Configure 1-on-1 sprint review slots for verified builder teams
+                Configure your weekly advisory channel and connect external calendar booking
               </p>
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="rounded-lg bg-blue-50/50 p-4 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
-                  <div className="text-xs font-bold text-blue-900 dark:text-blue-300">Weekly Review Slot</div>
-                  <div className="text-sm font-semibold text-zinc-900 dark:text-white mt-1">Thursdays &bull; 4:00 PM - 6:00 PM UTC</div>
-                  <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">2/4 Builder Slots Reserved</div>
+              <div className="mt-4 p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold text-zinc-900 dark:text-white">External Calendar Sync</div>
+                  <div className="text-[11px] text-zinc-500">Connect Google Calendar or Cal.com link on your public profile</div>
                 </div>
-
-                <div className="rounded-lg bg-zinc-50 p-4 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-center">
-                  <div>
-                    <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Connect Google Calendar / Cal.com</div>
-                    <button className="mt-2 inline-flex items-center gap-1 rounded bg-zinc-950 px-3 py-1 text-xs font-semibold text-white dark:bg-white dark:text-zinc-950">
-                      Sync Calendar
-                    </button>
-                  </div>
-                </div>
+                <Link
+                  href="/profile"
+                  className="rounded-lg bg-zinc-950 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 transition-colors shrink-0"
+                >
+                  Update Profile Links
+                </Link>
               </div>
             </div>
           </div>
 
           <div className="space-y-6">
             <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Mentor Credentials</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Mentor Status</h3>
               <div className="mt-3 space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Status</span>
-                  <span className="font-semibold text-green-600">Active Mentor</span>
+                  <span className="text-zinc-500">Role Status</span>
+                  <span className="font-semibold text-green-600 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Active Mentor
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Solutions Reviewed</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white">14 Prototypes</span>
+                  <span className="text-zinc-500">Verified Badge</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    {currentRoleBadge?.badgeLabel || "Verified Mentor"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Rating</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white">4.9 / 5.0</span>
+                  <span className="text-zinc-500">Permissions</span>
+                  <span className="font-mono text-zinc-600 dark:text-zinc-400 text-[10px]">mentor.access, review</span>
                 </div>
               </div>
             </div>
@@ -593,48 +589,47 @@ function DashboardContent() {
                   </p>
                 </div>
 
-                <button className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shadow-sm">
-                  <Plus className="h-3.5 w-3.5" /> Post New Problem
-                </button>
+                <a
+                  href="https://builds.avyantrix.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shadow-sm"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Post Problem Statement
+                </a>
               </div>
 
-              <div className="mt-6 space-y-3">
-                <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-900 dark:text-white">
-                      Differential Pressure Sensor Calibration Drift at Sub-Zero Ambient
-                    </span>
-                    <span className="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950/40 dark:text-green-300">
-                      Live &bull; 8 Solutions Inbound
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    Industrial MEMS sensor array calibration algorithm requiring low MCU power footprint under 5mA.
-                  </p>
-                  <div className="pt-2 flex items-center justify-between text-xs border-t border-zinc-100 dark:border-zinc-800/60">
-                    <span className="font-semibold text-amber-600">$5,000 Bounty Allocated</span>
-                    <button className="text-xs text-red-600 hover:underline">Review Inbound Proposals &rarr;</button>
-                  </div>
-                </div>
+              <div className="mt-6 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
+                <FileCheck2 className="mx-auto h-8 w-8 text-zinc-400" />
+                <h4 className="text-xs font-bold text-zinc-900 dark:text-white mt-2">
+                  No Active Problem Statements Published
+                </h4>
+                <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                  When you publish industrial bottlenecks, hardware constraints, or venture challenge briefs, they will appear here.
+                </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-6">
             <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Enterprise Metrics</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Enterprise Status</h3>
               <div className="mt-3 space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Active Briefs</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white">1 Problem</span>
+                  <span className="text-zinc-500">Entity Status</span>
+                  <span className="font-semibold text-green-600 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Verified Partner
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Total Inbound IP</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white">8 Prototypes</span>
+                  <span className="text-zinc-500">Verified Badge</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    {currentRoleBadge?.badgeLabel || "Verified Problem Owner"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Escrowed Bounty</span>
-                  <span className="font-semibold text-amber-600">$5,000 USD</span>
+                  <span className="text-zinc-500">Permissions</span>
+                  <span className="font-mono text-zinc-600 dark:text-zinc-400 text-[10px]">problem.create</span>
                 </div>
               </div>
             </div>
@@ -656,52 +651,51 @@ function DashboardContent() {
                     Competitive Hackathons & Sprints
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Manage hackathon registrations, participant tracking, and judging panels
+                    Manage hackathon registrations, participant tracking, and judging rubrics
                   </p>
                 </div>
 
-                <button className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 transition-colors shadow-sm">
-                  <Plus className="h-3.5 w-3.5" /> Create Sprint
-                </button>
+                <a
+                  href="https://challenges.avyantrix.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 transition-colors shadow-sm"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Create New Sprint
+                </a>
               </div>
 
-              <div className="mt-6 space-y-3">
-                <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-900 dark:text-white">
-                      Avyantrix DeepTech Hardware Sprint 2026
-                    </span>
-                    <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-semibold text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
-                      Registration Open
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    48-hour competitive sprint focused on physiological sensing, TinyML, and edge computing.
-                  </p>
-                  <div className="pt-2 flex items-center justify-between text-xs border-t border-zinc-100 dark:border-zinc-800/60">
-                    <span>142 Registered Builders &bull; 12 Teams Formed</span>
-                    <button className="text-xs text-purple-600 font-semibold hover:underline">Manage Sprint & Scoring &rarr;</button>
-                  </div>
-                </div>
+              <div className="mt-6 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
+                <Trophy className="mx-auto h-8 w-8 text-zinc-400" />
+                <h4 className="text-xs font-bold text-zinc-900 dark:text-white mt-2">
+                  No Hosted Sprints Yet
+                </h4>
+                <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                  When you host or co-organize competitive sprints on Avyantrix Challenges, your participants, team formations, and live leaderboards will appear here.
+                </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-6">
             <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Organizer Overview</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Organizer Status</h3>
               <div className="mt-3 space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Hosted Sprints</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white">1 Live</span>
+                  <span className="text-zinc-500">Organizer Status</span>
+                  <span className="font-semibold text-green-600 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Verified Host
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Total Participants</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white">142 Builders</span>
+                  <span className="text-zinc-500">Verified Badge</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    {currentRoleBadge?.badgeLabel || "Verified Organizer"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Judging Status</span>
-                  <span className="font-semibold text-green-600">Rubric Configured</span>
+                  <span className="text-zinc-500">Permissions</span>
+                  <span className="font-mono text-zinc-600 dark:text-zinc-400 text-[10px]">challenge.create</span>
                 </div>
               </div>
             </div>
