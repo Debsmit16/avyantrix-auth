@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import * as argon2 from "argon2";
+import { hash, verify, Algorithm, Version } from "@node-rs/argon2";
 import crypto from "node:crypto";
 
 // Helper JWT signing for test suite
@@ -41,19 +41,20 @@ function verifyTestJwt(token, secret) {
 // 1. Test Argon2id password hashing and verification (OWASP RFC 9106)
 test("Argon2id password hashing and verification", async () => {
   const password = "Correct-Horse-Battery-Staple-2026!";
-  const hash = await argon2.hash(password, {
-    type: argon2.argon2id,
+  const passwordHash = await hash(password, {
+    algorithm: Algorithm.Argon2id,
+    version: Version.V0x13,
     memoryCost: 65536,
     timeCost: 3,
     parallelism: 1,
-    hashLength: 32,
+    outputLen: 32,
   });
 
-  assert.ok(hash.startsWith("$argon2id$"), "Hash must use argon2id algorithm");
-  const isValid = await argon2.verify(hash, password);
+  assert.ok(passwordHash.startsWith("$argon2id$"), "Hash must use argon2id algorithm");
+  const isValid = await verify(passwordHash, password, { algorithm: Algorithm.Argon2id });
   assert.equal(isValid, true, "Valid password must verify against Argon2id hash");
 
-  const isInvalid = await argon2.verify(hash, "WrongPassword@2026");
+  const isInvalid = await verify(passwordHash, "WrongPassword@2026", { algorithm: Algorithm.Argon2id });
   assert.equal(isInvalid, false, "Invalid password must fail verification");
 });
 

@@ -1,4 +1,4 @@
-import * as argon2 from "argon2";
+import { hash, verify, Algorithm, Version } from "@node-rs/argon2";
 
 /**
  * Common weak / trivial passwords list to reject.
@@ -15,24 +15,28 @@ const COMMON_WEAK_PASSWORDS = new Set([
 
 /**
  * Hash a password using Argon2id exclusively (OWASP RFC 9106 recommended).
- * Configured with memoryCost: 64MB, timeCost: 3, parallelism: 1, hashLength: 32.
+ * Configured with memoryCost: 64MB (65536 KB), timeCost: 3, parallelism: 1, outputLen: 32.
  */
 export async function hashPassword(password: string): Promise<string> {
-  return await argon2.hash(password, {
-    type: argon2.argon2id,
-    memoryCost: 65536, // 64 MB
-    timeCost: 3,       // 3 iterations
-    parallelism: 1,    // 1 lane (serverless friendly)
-    hashLength: 32,    // 256-bit output hash
+  return await hash(password, {
+    algorithm: Algorithm.Argon2id,
+    version: Version.V0x13,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 1,
+    outputLen: 32,
   });
 }
 
 /**
  * Verify a plaintext password against an Argon2id hash.
  */
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+export async function verifyPassword(password: string, hashString: string): Promise<boolean> {
   try {
-    return await argon2.verify(hash, password);
+    return await verify(hashString, password, {
+      algorithm: Algorithm.Argon2id,
+      version: Version.V0x13,
+    });
   } catch (error) {
     return false;
   }
