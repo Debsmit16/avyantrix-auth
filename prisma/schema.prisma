@@ -21,6 +21,8 @@ enum VerificationCategory {
   EDUCATION
   CAPABILITY_BUILDER
   PROBLEM_OWNER
+  MENTOR
+  CHALLENGE_ORGANIZER
 }
 
 enum VerificationStatus {

@@ -20,6 +20,7 @@ const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required.").max(100),
   lastName: z.string().min(1, "Last name is required.").max(100),
   password: z.string().min(12, "Password must be at least 12 characters."),
+  intendedRole: z.enum(["BUILDER", "MENTOR", "PROBLEM_OWNER", "CHALLENGE_ORGANIZER"]).optional().default("BUILDER"),
 });
 
 export async function POST(req: NextRequest) {
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, username, firstName, lastName, password } = parseResult.data;
+    const { email, username, firstName, lastName, password, intendedRole } = parseResult.data;
 
     // Validate Argon2id password complexity
     const passwordCheck = validatePasswordStrength(password);
@@ -127,13 +128,14 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       eventType: "VERIFICATION_SUBMITTED",
       ipAddress: ip,
-      metadata: { action: "user_registered", email: normalizedEmail },
+      metadata: { action: "user_registered", email: normalizedEmail, intendedRole },
     });
 
     return NextResponse.json(
       {
         message: "Registration successful. Please check your email to verify your Avyantrix ID.",
         userId: user.id,
+        intendedRole,
       },
       { status: 201 }
     );

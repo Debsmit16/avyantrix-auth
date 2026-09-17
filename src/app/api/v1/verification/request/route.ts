@@ -8,8 +8,15 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const verificationRequestSchema = z.object({
-  category: z.enum(["IDENTITY", "EDUCATION", "CAPABILITY_BUILDER", "PROBLEM_OWNER"]),
-  notes: z.string().max(2000).optional(),
+  category: z.enum([
+    "IDENTITY",
+    "EDUCATION",
+    "CAPABILITY_BUILDER",
+    "PROBLEM_OWNER",
+    "MENTOR",
+    "CHALLENGE_ORGANIZER",
+  ]),
+  notes: z.string().max(4000).optional(),
   evidence: z.array(
     z.object({
       evidenceType: z.enum([
@@ -23,7 +30,7 @@ const verificationRequestSchema = z.object({
       ]),
       title: z.string().min(1).max(200),
       evidenceUrl: z.string().url().max(500).optional().nullable(),
-      description: z.string().max(1000).optional(),
+      description: z.string().max(2000).optional(),
     })
   ).min(1, "At least one evidence item or proof link must be provided."),
 });

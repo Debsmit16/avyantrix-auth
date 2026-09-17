@@ -27,6 +27,11 @@ export async function GET(req: NextRequest) {
         user: {
           include: {
             profile: true,
+            userRoles: {
+              include: {
+                role: true,
+              },
+            },
           },
         },
         evidence: true, // Only authorized reviewers see private evidence

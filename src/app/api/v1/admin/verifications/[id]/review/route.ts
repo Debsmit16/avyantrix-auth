@@ -61,6 +61,8 @@ export async function POST(
           EDUCATION: "Education Verified",
           CAPABILITY_BUILDER: "Verified Builder",
           PROBLEM_OWNER: "Verified Problem Owner",
+          MENTOR: "Verified Mentor",
+          CHALLENGE_ORGANIZER: "Verified Organizer",
         };
 
         const label = badgeLabel || defaultBadgeLabels[request.category] || "Verified";
@@ -84,6 +86,38 @@ export async function POST(
             isActive: true,
           },
         });
+
+        // Automatically provision corresponding RBAC Role
+        const roleMapping: Record<string, string> = {
+          CAPABILITY_BUILDER: "BUILDER",
+          PROBLEM_OWNER: "PROBLEM_OWNER",
+          MENTOR: "MENTOR",
+          CHALLENGE_ORGANIZER: "CHALLENGE_ORGANIZER",
+        };
+
+        const targetRoleName = roleMapping[request.category];
+        if (targetRoleName) {
+          const roleRecord = await tx.role.findUnique({
+            where: { name: targetRoleName },
+          });
+
+          if (roleRecord) {
+            await tx.userRole.upsert({
+              where: {
+                userId_roleId: {
+                  userId: request.userId,
+                  roleId: roleRecord.id,
+                },
+              },
+              update: {},
+              create: {
+                userId: request.userId,
+                roleId: roleRecord.id,
+                assignedBy: reviewer.userId,
+              },
+            });
+          }
+        }
       } else if (decision === "REJECTED") {
         await tx.verificationBadge.updateMany({
           where: {

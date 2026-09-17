@@ -2,7 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Shield, Lock, Mail, User, AtSign, AlertCircle, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import {
+  Shield,
+  Lock,
+  Mail,
+  User,
+  AtSign,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  Loader2,
+  Code2,
+  GraduationCap,
+  Building2,
+  Trophy,
+} from "lucide-react";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -11,6 +25,7 @@ export default function RegisterPage() {
     username: "",
     email: "",
     password: "",
+    intendedRole: "BUILDER",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -132,6 +147,78 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Primary Role / Persona Selector */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+              Primary Role / Intended Usage
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, intendedRole: "BUILDER" })}
+                className={`flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all ${
+                  formData.intendedRole === "BUILDER"
+                    ? "border-red-500 bg-red-50/50 text-red-700 dark:border-red-500/80 dark:bg-red-950/40 dark:text-red-300 shadow-sm"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400"
+                }`}
+              >
+                <Code2 className="h-4 w-4 shrink-0 text-red-500" />
+                <div>
+                  <div className="text-xs font-bold leading-none">Builder</div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">Code & build solutions</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, intendedRole: "MENTOR" })}
+                className={`flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all ${
+                  formData.intendedRole === "MENTOR"
+                    ? "border-red-500 bg-red-50/50 text-red-700 dark:border-red-500/80 dark:bg-red-950/40 dark:text-red-300 shadow-sm"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400"
+                }`}
+              >
+                <GraduationCap className="h-4 w-4 shrink-0 text-red-500" />
+                <div>
+                  <div className="text-xs font-bold leading-none">Mentor</div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">Guide & review builders</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, intendedRole: "PROBLEM_OWNER" })}
+                className={`flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all ${
+                  formData.intendedRole === "PROBLEM_OWNER"
+                    ? "border-red-500 bg-red-50/50 text-red-700 dark:border-red-500/80 dark:bg-red-950/40 dark:text-red-300 shadow-sm"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400"
+                }`}
+              >
+                <Building2 className="h-4 w-4 shrink-0 text-red-500" />
+                <div>
+                  <div className="text-xs font-bold leading-none">Problem Owner</div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">Post enterprise challenges</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, intendedRole: "CHALLENGE_ORGANIZER" })}
+                className={`flex items-center gap-2 rounded-lg border p-2.5 text-left transition-all ${
+                  formData.intendedRole === "CHALLENGE_ORGANIZER"
+                    ? "border-red-500 bg-red-50/50 text-red-700 dark:border-red-500/80 dark:bg-red-950/40 dark:text-red-300 shadow-sm"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400"
+                }`}
+              >
+                <Trophy className="h-4 w-4 shrink-0 text-red-500" />
+                <div>
+                  <div className="text-xs font-bold leading-none">Organizer</div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">Host hackathons & sprints</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
