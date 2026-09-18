@@ -23,6 +23,7 @@ import {
   EyeOff,
   QrCode,
   Key,
+  Unlink,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
@@ -65,6 +66,16 @@ export default function SecurityPage() {
   const [disableCode, setDisableCode] = useState("");
   const [disableLoading, setDisableLoading] = useState(false);
   const [disableError, setDisableError] = useState("");
+
+  // Custom Confirmation Dialog Modals
+  const [logoutAllModalOpen, setLogoutAllModalOpen] = useState(false);
+  const [logoutAllLoading, setLogoutAllLoading] = useState(false);
+
+  const [unlinkModal, setUnlinkModal] = useState<{ isOpen: boolean; provider: string }>({ isOpen: false, provider: "" });
+  const [unlinkLoading, setUnlinkLoading] = useState(false);
+
+  const [revokeModal, setRevokeModal] = useState<{ isOpen: boolean; sessionId: string; deviceInfo: string }>({ isOpen: false, sessionId: "", deviceInfo: "" });
+  const [revokeLoading, setRevokeLoading] = useState(false);
 
   // Global action status
   const [actionError, setActionError] = useState("");
@@ -257,12 +268,15 @@ export default function SecurityPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleRevokeSession = async (sessionId: string) => {
+  // Execute Revoke Session
+  const executeRevokeSession = async () => {
+    if (!revokeModal.sessionId) return;
+    setRevokeLoading(true);
     setActionError("");
     setActionSuccess("");
 
     try {
-      const res = await fetch(`/api/v1/auth/sessions/${sessionId}`, {
+      const res = await fetch(`/api/v1/auth/sessions/${revokeModal.sessionId}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -270,38 +284,51 @@ export default function SecurityPage() {
         setActionError(data.error || "Failed to revoke session.");
       } else {
         setActionSuccess("Session revoked successfully.");
-        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+        setSessions((prev) => prev.filter((s) => s.id !== revokeModal.sessionId));
+        setRevokeModal({ isOpen: false, sessionId: "", deviceInfo: "" });
       }
     } catch (err) {
       setActionError("Network error revoking session.");
+    } finally {
+      setRevokeLoading(false);
     }
   };
 
-  const handleLogoutAll = async () => {
-    if (!confirm("Are you sure you want to sign out of all active sessions on all devices?")) return;
+  // Execute Logout All Sessions
+  const executeLogoutAll = async () => {
+    setLogoutAllLoading(true);
+    setActionError("");
 
     try {
       await fetch("/api/v1/auth/logout-all", { method: "POST" });
       router.push("/login");
     } catch (err) {
       setActionError("Failed to logout all sessions.");
+      setLogoutAllLoading(false);
     }
   };
 
-  const handleUnlink = async (provider: string) => {
-    if (!confirm(`Are you sure you want to disconnect ${provider}?`)) return;
+  // Execute Unlink Provider
+  const executeUnlink = async () => {
+    if (!unlinkModal.provider) return;
+    setUnlinkLoading(true);
+    setActionError("");
+    setActionSuccess("");
 
     try {
-      const res = await fetch(`/api/v1/oauth/unlink/${provider}`, { method: "DELETE" });
+      const res = await fetch(`/api/v1/oauth/unlink/${unlinkModal.provider}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) {
         setActionError(data.error || "Failed to unlink provider.");
       } else {
-        setActionSuccess(`${provider} disconnected successfully.`);
+        setActionSuccess(`${unlinkModal.provider.toUpperCase()} disconnected successfully.`);
+        setUnlinkModal({ isOpen: false, provider: "" });
         loadSecurityData();
       }
     } catch (err) {
-      setActionError("Network error.");
+      setActionError("Network error disconnecting provider.");
+    } finally {
+      setUnlinkLoading(false);
     }
   };
 
@@ -502,7 +529,7 @@ export default function SecurityPage() {
           </div>
 
           <button
-            onClick={handleLogoutAll}
+            onClick={() => setLogoutAllModalOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400 transition-colors"
           >
             <LogOut className="h-3.5 w-3.5" /> Sign Out Everywhere
@@ -541,7 +568,7 @@ export default function SecurityPage() {
 
                 {!isCurrent && (
                   <button
-                    onClick={() => handleRevokeSession(s.id)}
+                    onClick={() => setRevokeModal({ isOpen: true, sessionId: s.id, deviceInfo: s.deviceInfo || "Web Browser" })}
                     className="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
                   >
                     Revoke
@@ -578,7 +605,7 @@ export default function SecurityPage() {
                 </div>
               </div>
               <button
-                onClick={() => handleUnlink("google")}
+                onClick={() => setUnlinkModal({ isOpen: true, provider: "google" })}
                 className="text-xs font-medium text-zinc-600 hover:text-red-600 dark:text-zinc-400"
               >
                 Disconnect
@@ -611,7 +638,7 @@ export default function SecurityPage() {
                 </div>
               </div>
               <button
-                onClick={() => handleUnlink("github")}
+                onClick={() => setUnlinkModal({ isOpen: true, provider: "github" })}
                 className="text-xs font-medium text-zinc-600 hover:text-red-600 dark:text-zinc-400"
               >
                 Disconnect
@@ -875,6 +902,111 @@ export default function SecurityPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Custom Sign Out Everywhere Confirmation */}
+      {logoutAllModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-2.5 text-red-600">
+              <LogOut className="h-5 w-5" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                Sign Out of All Devices?
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300">
+              Are you sure you want to terminate all active sessions across all browsers and devices? You will be signed out immediately and need to log back in.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setLogoutAllModalOpen(false)}
+                className="rounded-lg border border-zinc-200 px-3.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeLogoutAll}
+                disabled={logoutAllLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {logoutAllLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Sign Out Everywhere
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Custom Unlink Provider Confirmation */}
+      {unlinkModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-2.5 text-zinc-900 dark:text-white">
+              <Unlink className="h-5 w-5 text-amber-500" />
+              <h3 className="text-sm font-bold">
+                Disconnect {unlinkModal.provider === "google" ? "Google" : "GitHub"} Account?
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300">
+              You will no longer be able to use one-click login with this {unlinkModal.provider} identity until you reconnect it.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setUnlinkModal({ isOpen: false, provider: "" })}
+                className="rounded-lg border border-zinc-200 px-3.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeUnlink}
+                disabled={unlinkLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {unlinkLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Disconnect
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Custom Revoke Session Confirmation */}
+      {revokeModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-2.5 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                Revoke Device Session?
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300">
+              Are you sure you want to disconnect this session ({revokeModal.deviceInfo})? The device will be immediately logged out.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setRevokeModal({ isOpen: false, sessionId: "", deviceInfo: "" })}
+                className="rounded-lg border border-zinc-200 px-3.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeRevokeSession}
+                disabled={revokeLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {revokeLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Revoke Session
+              </button>
+            </div>
           </div>
         </div>
       )}

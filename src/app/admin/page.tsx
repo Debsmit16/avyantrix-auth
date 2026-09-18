@@ -21,6 +21,7 @@ import {
   Filter,
   FileText,
   BadgeCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
@@ -110,7 +111,49 @@ export default function AdminPage() {
     }
   }, [user, hasRole, activeTab, selectedLineup, selectedStatus]);
 
-  const handleReview = async (reqItem: any, decision: "VERIFIED" | "REJECTED") => {
+  // Custom Modal States for Admin Actions
+  const [reviewModal, setReviewModal] = useState<{
+    isOpen: boolean;
+    reqItem: any | null;
+    decision: "VERIFIED" | "REJECTED";
+    reviewNotes: string;
+  }>({
+    isOpen: false,
+    reqItem: null,
+    decision: "VERIFIED",
+    reviewNotes: "",
+  });
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+  const [statusModal, setStatusModal] = useState<{
+    isOpen: boolean;
+    targetUserId: string;
+    targetUsername: string;
+    newStatus: "ACTIVE" | "SUSPENDED";
+  }>({
+    isOpen: false,
+    targetUserId: "",
+    targetUsername: "",
+    newStatus: "ACTIVE",
+  });
+  const [statusLoading, setStatusLoading] = useState(false);
+
+  const openReviewModal = (reqItem: any, decision: "VERIFIED" | "REJECTED") => {
+    setReviewModal({
+      isOpen: true,
+      reqItem,
+      decision,
+      reviewNotes: "",
+    });
+  };
+
+  const executeReview = async () => {
+    if (!reviewModal.reqItem) return;
+    setReviewLoading(true);
+    setActionError("");
+    setActionSuccess("");
+
+    const { reqItem, decision, reviewNotes } = reviewModal;
     const roleTarget =
       reqItem.category === "CAPABILITY_BUILDER"
         ? "BUILDER"
@@ -122,22 +165,11 @@ export default function AdminPage() {
         ? "CHALLENGE_ORGANIZER"
         : reqItem.category;
 
-    const actionText =
-      decision === "VERIFIED"
-        ? `Approve this submission and automatically grant '${roleTarget}' role & badge?`
-        : `Reject this verification request?`;
-
-    const reviewNotes = prompt(`${actionText}\nEnter optional review notes:`, "") ?? null;
-    if (reviewNotes === null) return; // User cancelled prompt
-
-    setActionError("");
-    setActionSuccess("");
-
     try {
       const res = await fetch(`/api/v1/admin/verifications/${reqItem.id}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision, reviewNotes }),
+        body: JSON.stringify({ decision, reviewNotes: reviewNotes.trim() || null }),
       });
 
       const data = await res.json();
@@ -149,30 +181,51 @@ export default function AdminPage() {
             ? `Request verified! Granted '${roleTarget}' role and issued verified badge to @${reqItem.user.profile?.username || reqItem.user.email}.`
             : `Request marked as rejected.`
         );
+        setReviewModal({ isOpen: false, reqItem: null, decision: "VERIFIED", reviewNotes: "" });
         loadVerifications();
       }
     } catch (err) {
       setActionError("Network error executing review.");
+    } finally {
+      setReviewLoading(false);
     }
   };
 
-  const handleToggleStatus = async (targetUserId: string, currentStatus: string) => {
+  const openStatusModal = (targetUserId: string, currentStatus: string, targetUsername: string) => {
     const newStatus = currentStatus === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
-    if (!confirm(`Are you sure you want to change user status to ${newStatus}?`)) return;
+    setStatusModal({
+      isOpen: true,
+      targetUserId,
+      targetUsername,
+      newStatus,
+    });
+  };
+
+  const executeToggleStatus = async () => {
+    if (!statusModal.targetUserId) return;
+    setStatusLoading(true);
+    setActionError("");
+    setActionSuccess("");
 
     try {
-      const res = await fetch(`/api/v1/admin/users/${targetUserId}/status`, {
+      const res = await fetch(`/api/v1/admin/users/${statusModal.targetUserId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: statusModal.newStatus }),
       });
 
       if (res.ok) {
-        setActionSuccess(`User status updated to ${newStatus}.`);
+        setActionSuccess(`User @${statusModal.targetUsername} status updated to ${statusModal.newStatus}.`);
+        setStatusModal({ isOpen: false, targetUserId: "", targetUsername: "", newStatus: "ACTIVE" });
         loadUsers();
+      } else {
+        const data = await res.json();
+        setActionError(data.error || "Failed to update status.");
       }
     } catch (err) {
       setActionError("Failed to update status.");
+    } finally {
+      setStatusLoading(false);
     }
   };
 
@@ -182,7 +235,7 @@ export default function AdminPage() {
       : [...currentRoles, roleToToggle];
 
     if (newRoles.length === 0) {
-      alert("A user must have at least one assigned role.");
+      setActionError("A user must have at least one assigned role.");
       return;
     }
 
@@ -459,13 +512,13 @@ export default function AdminPage() {
                       {req.status === "PENDING" && (
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleReview(req, "VERIFIED")}
+                            onClick={() => openReviewModal(req, "VERIFIED")}
                             className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition-colors shadow-sm"
                           >
                             <BadgeCheck className="h-3.5 w-3.5" /> Approve & Grant Role
                           </button>
                           <button
-                            onClick={() => handleReview(req, "REJECTED")}
+                            onClick={() => openReviewModal(req, "REJECTED")}
                             className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400 transition-colors"
                           >
                             <XCircle className="h-3.5 w-3.5" /> Reject
@@ -625,8 +678,8 @@ export default function AdminPage() {
                       <td className="py-3 px-2">{u.activeSessionsCount} active</td>
                       <td className="py-3 px-2 text-right">
                         <button
-                          onClick={() => handleToggleStatus(u.id, u.status)}
-                          className="text-xs text-red-600 hover:underline dark:text-red-400"
+                          onClick={() => openStatusModal(u.id, u.status, u.profile?.username || u.email)}
+                          className="text-xs text-red-600 hover:underline dark:text-red-400 font-medium"
                         >
                           {u.status === "ACTIVE" ? "Suspend" : "Activate"}
                         </button>
@@ -679,6 +732,131 @@ export default function AdminPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* MODAL: Custom Verification Review Dialog */}
+      {reviewModal.isOpen && reviewModal.reqItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                {reviewModal.decision === "VERIFIED" ? (
+                  <BadgeCheck className="h-5 w-5 text-green-600" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-red-600" />
+                )}
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                  {reviewModal.decision === "VERIFIED"
+                    ? "Approve Verification Request"
+                    : "Reject Verification Request"}
+                </h3>
+              </div>
+              <button
+                onClick={() => setReviewModal({ isOpen: false, reqItem: null, decision: "VERIFIED", reviewNotes: "" })}
+                className="text-zinc-400 hover:text-zinc-600 text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="rounded-lg bg-zinc-50 p-3 text-xs text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300 space-y-1">
+              <p>
+                <span className="font-semibold text-zinc-900 dark:text-white">Applicant:</span>{" "}
+                {reviewModal.reqItem.user.profile?.firstName} {reviewModal.reqItem.user.profile?.lastName} (@{reviewModal.reqItem.user.profile?.username || reviewModal.reqItem.user.email})
+              </p>
+              <p>
+                <span className="font-semibold text-zinc-900 dark:text-white">Track:</span>{" "}
+                {reviewModal.reqItem.category}
+              </p>
+              <p className="text-[11px] text-zinc-500">
+                {reviewModal.decision === "VERIFIED"
+                  ? "Approving will automatically assign the official role & badge, and send a congratulatory email."
+                  : "Rejecting will notify the applicant via email with your feedback so they can resubmit."}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                Reviewer Feedback / Decision Notes {reviewModal.decision === "REJECTED" && <span className="text-red-500">*</span>}
+              </label>
+              <textarea
+                rows={3}
+                value={reviewModal.reviewNotes}
+                onChange={(e) => setReviewModal((prev) => ({ ...prev, reviewNotes: e.target.value }))}
+                placeholder={
+                  reviewModal.decision === "VERIFIED"
+                    ? "e.g. Excellent open source contributions and clear repository evidence."
+                    : "e.g. The repository link was private. Please provide a public link or deployed URL."
+                }
+                className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-900 focus:border-red-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setReviewModal({ isOpen: false, reqItem: null, decision: "VERIFIED", reviewNotes: "" })}
+                className="rounded-lg border border-zinc-200 px-3.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeReview}
+                disabled={reviewLoading}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-colors disabled:opacity-50 ${
+                  reviewModal.decision === "VERIFIED"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                {reviewLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {reviewModal.decision === "VERIFIED" ? "Confirm Approval" : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Custom User Status Toggle Dialog */}
+      {statusModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-2.5 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                {statusModal.newStatus === "SUSPENDED" ? "Suspend User Account?" : "Reactivate User Account?"}
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300">
+              {statusModal.newStatus === "SUSPENDED"
+                ? `Are you sure you want to suspend @${statusModal.targetUsername}? Their active sessions will be terminated and they will be blocked from logging in.`
+                : `Are you sure you want to restore active status for @${statusModal.targetUsername}?`}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setStatusModal({ isOpen: false, targetUserId: "", targetUsername: "", newStatus: "ACTIVE" })}
+                className="rounded-lg border border-zinc-200 px-3.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeToggleStatus}
+                disabled={statusLoading}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-colors disabled:opacity-50 ${
+                  statusModal.newStatus === "SUSPENDED"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
+              >
+                {statusLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {statusModal.newStatus === "SUSPENDED" ? "Suspend Account" : "Reactivate Account"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
