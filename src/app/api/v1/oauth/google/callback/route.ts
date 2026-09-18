@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { validateOAuthState, getGoogleUser } from "@/lib/auth/oauth";
+import { validateOAuthState, getGoogleUser, getAppBaseUrl } from "@/lib/auth/oauth";
 import { createSession } from "@/lib/auth/session";
 import { logLoginEvent, logSecurityEvent } from "@/lib/auth/audit";
+import { isReservedUsername } from "@/lib/auth/reserved-usernames";
+import { dispatchWebhookEvent } from "@/lib/webhooks/dispatcher";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -10,20 +13,34 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") || "unknown";
   const userAgent = req.headers.get("user-agent") || "unknown";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com";
+  const baseUrl = getAppBaseUrl(req);
 
   try {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code");
     const state = searchParams.get("state");
+    const oauthError = searchParams.get("error");
 
-    if (!code || !state || !validateOAuthState(state)) {
-      return NextResponse.redirect(`${appUrl}/login?error=Invalid+OAuth+state+or+code`);
+    if (oauthError) {
+      return NextResponse.redirect(
+        `${baseUrl}/login?error=${encodeURIComponent(`Google authentication was cancelled: ${oauthError}`)}`
+      );
     }
 
-    const googleUser = await getGoogleUser(code);
+    if (!code || !state) {
+      return NextResponse.redirect(`${baseUrl}/login?error=Missing+Google+authorization+code`);
+    }
+
+    const stateValidation = validateOAuthState(state);
+    if (!stateValidation.valid) {
+      return NextResponse.redirect(`${baseUrl}/login?error=Invalid+or+expired+OAuth+session`);
+    }
+
+    const returnTo = stateValidation.returnTo || "/dashboard";
+
+    const googleUser = await getGoogleUser(code, baseUrl);
     if (!googleUser.email) {
-      return NextResponse.redirect(`${appUrl}/login?error=Unable+to+retrieve+email+from+Google`);
+      return NextResponse.redirect(`${baseUrl}/login?error=Unable+to+retrieve+email+from+Google`);
     }
 
     const normalizedEmail = googleUser.email.toLowerCase().trim();
@@ -60,6 +77,7 @@ export async function GET(req: NextRequest) {
             providerEmail: normalizedEmail,
           },
         });
+
         // If user wasn't verified, Google verified email validates them
         if (!existingUser.emailVerified && googleUser.verified_email) {
           await prisma.user.update({
@@ -67,6 +85,7 @@ export async function GET(req: NextRequest) {
             data: { emailVerified: true },
           });
         }
+
         await logSecurityEvent({
           userId: existingUser.id,
           eventType: "OAUTH_LINKED",
@@ -76,24 +95,33 @@ export async function GET(req: NextRequest) {
       } else {
         // 3. New User Registration via Google
         const builderRole = await prisma.role.findUnique({ where: { name: "BUILDER" } });
-        
+
         // Generate a clean, unique username based on name or email prefix
-        const baseUsername = (googleUser.name || normalizedEmail.split("@")[0])
+        const rawBase = (googleUser.name || normalizedEmail.split("@")[0])
           .toLowerCase()
-          .replace(/[^a-z0-9_-]/g, "")
+          .replace(/[^a-z0-9_]/g, "")
           .substring(0, 20) || "builder";
-        
-        let candidateUsername = baseUsername;
+
+        let candidateUsername = isReservedUsername(rawBase)
+          ? `${rawBase}_${crypto.randomBytes(2).toString("hex")}`
+          : rawBase;
+
         let counter = 1;
-        while (await prisma.userProfile.findUnique({ where: { username: candidateUsername } })) {
-          candidateUsername = `${baseUsername}${counter++}`;
+        while (
+          (await prisma.userProfile.findUnique({ where: { username: candidateUsername } })) ||
+          isReservedUsername(candidateUsername)
+        ) {
+          candidateUsername = `${rawBase}_${counter++}`;
         }
+
+        const firstName = googleUser.given_name || googleUser.name.split(" ")[0] || "Builder";
+        const lastName = googleUser.family_name || googleUser.name.split(" ").slice(1).join(" ") || "";
 
         const newUser = await prisma.$transaction(async (tx) => {
           const u = await tx.user.create({
             data: {
               email: normalizedEmail,
-              emailVerified: googleUser.verified_email || true,
+              emailVerified: googleUser.verified_email ?? true,
               status: "ACTIVE",
             },
           });
@@ -111,8 +139,8 @@ export async function GET(req: NextRequest) {
             data: {
               userId: u.id,
               username: candidateUsername,
-              firstName: googleUser.given_name || googleUser.name.split(" ")[0] || "Builder",
-              lastName: googleUser.family_name || googleUser.name.split(" ").slice(1).join(" ") || "",
+              firstName,
+              lastName,
               avatarUrl: googleUser.picture || null,
             },
           });
@@ -130,10 +158,21 @@ export async function GET(req: NextRequest) {
         });
 
         userId = newUser.id;
+
+        // Dispatch real-time webhook for new user creation
+        dispatchWebhookEvent("user.created", {
+          userId: newUser.id,
+          email: normalizedEmail,
+          username: candidateUsername,
+          firstName,
+          lastName,
+          provider: "google",
+          intendedRole: "BUILDER",
+        }).catch(() => {});
       }
     }
 
-    // Create session in Neon PostgreSQL
+    // Create session in Neon PostgreSQL and dispatch cookie
     await createSession({
       userId,
       ipAddress: ip,
@@ -149,9 +188,12 @@ export async function GET(req: NextRequest) {
       status: "SUCCESS",
     });
 
-    return NextResponse.redirect(`${appUrl}/dashboard`);
+    const destination = returnTo.startsWith("http") ? returnTo : `${baseUrl}${returnTo}`;
+    return NextResponse.redirect(destination);
   } catch (error) {
-    console.error("Google OAuth error:", (error as Error).message);
-    return NextResponse.redirect(`${appUrl}/login?error=Google+authentication+failed`);
+    console.error("Google OAuth callback error:", (error as Error).message);
+    return NextResponse.redirect(
+      `${baseUrl}/login?error=${encodeURIComponent((error as Error).message || "Google authentication failed")}`
+    );
   }
 }

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { validateOAuthState, getGitHubUser } from "@/lib/auth/oauth";
+import { validateOAuthState, getGitHubUser, getAppBaseUrl } from "@/lib/auth/oauth";
 import { createSession } from "@/lib/auth/session";
 import { logLoginEvent, logSecurityEvent } from "@/lib/auth/audit";
+import { isReservedUsername } from "@/lib/auth/reserved-usernames";
+import { dispatchWebhookEvent } from "@/lib/webhooks/dispatcher";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -10,20 +13,36 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") || "unknown";
   const userAgent = req.headers.get("user-agent") || "unknown";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com";
+  const baseUrl = getAppBaseUrl(req);
 
   try {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code");
     const state = searchParams.get("state");
+    const oauthError = searchParams.get("error");
 
-    if (!code || !state || !validateOAuthState(state)) {
-      return NextResponse.redirect(`${appUrl}/login?error=Invalid+OAuth+state+or+code`);
+    if (oauthError) {
+      return NextResponse.redirect(
+        `${baseUrl}/login?error=${encodeURIComponent(`GitHub authentication was cancelled: ${oauthError}`)}`
+      );
     }
 
-    const githubUser = await getGitHubUser(code);
+    if (!code || !state) {
+      return NextResponse.redirect(`${baseUrl}/login?error=Missing+GitHub+authorization+code`);
+    }
+
+    const stateValidation = validateOAuthState(state);
+    if (!stateValidation.valid) {
+      return NextResponse.redirect(`${baseUrl}/login?error=Invalid+or+expired+OAuth+session`);
+    }
+
+    const returnTo = stateValidation.returnTo || "/dashboard";
+
+    const githubUser = await getGitHubUser(code, baseUrl);
     if (!githubUser.email) {
-      return NextResponse.redirect(`${appUrl}/login?error=Unable+to+retrieve+verified+email+from+GitHub`);
+      return NextResponse.redirect(
+        `${baseUrl}/login?error=Unable+to+retrieve+verified+email+from+GitHub.+Please+ensure+your+GitHub+account+has+a+verified+primary+email.`
+      );
     }
 
     const normalizedEmail = githubUser.email.toLowerCase().trim();
@@ -59,12 +78,14 @@ export async function GET(req: NextRequest) {
             providerEmail: normalizedEmail,
           },
         });
+
         if (!existingUser.emailVerified) {
           await prisma.user.update({
             where: { id: existingUser.id },
             data: { emailVerified: true },
           });
         }
+
         await logSecurityEvent({
           userId: existingUser.id,
           eventType: "OAUTH_LINKED",
@@ -74,17 +95,27 @@ export async function GET(req: NextRequest) {
       } else {
         // 3. New User Registration via GitHub
         const builderRole = await prisma.role.findUnique({ where: { name: "BUILDER" } });
-        
-        const baseUsername = (githubUser.login || normalizedEmail.split("@")[0])
+
+        const rawBase = (githubUser.login || normalizedEmail.split("@")[0])
           .toLowerCase()
-          .replace(/[^a-z0-9_-]/g, "")
+          .replace(/[^a-z0-9_]/g, "")
           .substring(0, 20) || "builder";
 
-        let candidateUsername = baseUsername;
+        let candidateUsername = isReservedUsername(rawBase)
+          ? `${rawBase}_${crypto.randomBytes(2).toString("hex")}`
+          : rawBase;
+
         let counter = 1;
-        while (await prisma.userProfile.findUnique({ where: { username: candidateUsername } })) {
-          candidateUsername = `${baseUsername}${counter++}`;
+        while (
+          (await prisma.userProfile.findUnique({ where: { username: candidateUsername } })) ||
+          isReservedUsername(candidateUsername)
+        ) {
+          candidateUsername = `${rawBase}_${counter++}`;
         }
+
+        const nameParts = (githubUser.name || githubUser.login).trim().split(/\s+/);
+        const firstName = nameParts[0] || "Builder";
+        const lastName = nameParts.slice(1).join(" ") || "";
 
         const newUser = await prisma.$transaction(async (tx) => {
           const u = await tx.user.create({
@@ -104,14 +135,13 @@ export async function GET(req: NextRequest) {
             },
           });
 
-          const nameParts = (githubUser.name || githubUser.login).split(" ");
           await tx.userProfile.create({
             data: {
               userId: u.id,
               username: candidateUsername,
-              firstName: nameParts[0] || "Builder",
-              lastName: nameParts.slice(1).join(" ") || "",
-              avatarUrl: githubUser.avatar_url,
+              firstName,
+              lastName,
+              avatarUrl: githubUser.avatar_url || null,
               githubUrl: `https://github.com/${githubUser.login}`,
             },
           });
@@ -129,6 +159,17 @@ export async function GET(req: NextRequest) {
         });
 
         userId = newUser.id;
+
+        // Dispatch real-time webhook for new user creation
+        dispatchWebhookEvent("user.created", {
+          userId: newUser.id,
+          email: normalizedEmail,
+          username: candidateUsername,
+          firstName,
+          lastName,
+          provider: "github",
+          intendedRole: "BUILDER",
+        }).catch(() => {});
       }
     }
 
@@ -148,9 +189,12 @@ export async function GET(req: NextRequest) {
       status: "SUCCESS",
     });
 
-    return NextResponse.redirect(`${appUrl}/dashboard`);
+    const destination = returnTo.startsWith("http") ? returnTo : `${baseUrl}${returnTo}`;
+    return NextResponse.redirect(destination);
   } catch (error) {
-    console.error("GitHub OAuth error:", (error as Error).message);
-    return NextResponse.redirect(`${appUrl}/login?error=GitHub+authentication+failed`);
+    console.error("GitHub OAuth callback error:", (error as Error).message);
+    return NextResponse.redirect(
+      `${baseUrl}/login?error=${encodeURIComponent((error as Error).message || "GitHub authentication failed")}`
+    );
   }
 }

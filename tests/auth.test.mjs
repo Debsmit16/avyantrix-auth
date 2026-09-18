@@ -659,5 +659,65 @@ test("Structured health probe computes uptime, latency, and system memory", () =
   assert.equal(probe.checks.smtp.status, "configured");
 });
 
+// 19. Test OAuth State Encoding & Return Destination Preservation
+test("OAuth state encoding embeds return destination and decodes safely", () => {
+  function encodeOAuthState(returnTo) {
+    const randomHex = crypto.randomBytes(16).toString("hex");
+    const payload = JSON.stringify({ r: randomHex, next: returnTo });
+    return Buffer.from(payload).toString("base64url");
+  }
+
+  function decodeOAuthState(state) {
+    try {
+      const raw = Buffer.from(state, "base64url").toString("utf8");
+      const parsed = JSON.parse(raw);
+      return typeof parsed.next === "string" ? parsed.next : "/dashboard";
+    } catch {
+      return "/dashboard";
+    }
+  }
+
+  const state1 = encodeOAuthState("/verification?track=CAPABILITY_BUILDER");
+  assert.equal(decodeOAuthState(state1), "/verification?track=CAPABILITY_BUILDER");
+
+  const state2 = encodeOAuthState("/api/v1/oauth/authorize?client_id=avyantrix_builds");
+  assert.equal(decodeOAuthState(state2), "/api/v1/oauth/authorize?client_id=avyantrix_builds");
+
+  const stateInvalid = "invalid_base64_json_string";
+  assert.equal(decodeOAuthState(stateInvalid), "/dashboard");
+});
+
+// 20. Test OAuth Registration Username Normalization & Reserved Word Collision Defense
+test("OAuth registration generates clean handles and evades reserved keyword collisions", () => {
+  const RESERVED = new Set(["admin", "auth", "root", "support", "avyantrix"]);
+
+  function generateSafeHandle(rawName, existingUsernames = new Set()) {
+    const base = rawName
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "")
+      .substring(0, 20) || "builder";
+
+    let candidate = RESERVED.has(base) ? `${base}_${crypto.randomBytes(2).toString("hex")}` : base;
+
+    let counter = 1;
+    while (existingUsernames.has(candidate) || RESERVED.has(candidate)) {
+      candidate = `${base}_${counter++}`;
+    }
+    return candidate;
+  }
+
+  const handle1 = generateSafeHandle("Alex Vance");
+  assert.equal(handle1, "alexvance");
+
+  const handle2 = generateSafeHandle("admin");
+  assert.notEqual(handle2, "admin", "Reserved username must never be claimed directly");
+  assert.match(handle2, /^admin_[a-f0-9]+$/, "Reserved handle must get safe suffix");
+
+  const existing = new Set(["debsmit"]);
+  const handle3 = generateSafeHandle("debsmit", existing);
+  assert.equal(handle3, "debsmit_1");
+});
+
+
 
 

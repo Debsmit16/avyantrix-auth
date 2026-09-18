@@ -1,9 +1,31 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { NextRequest } from "next/server";
 
-export function generateOAuthState(): string {
-  const state = crypto.randomBytes(24).toString("hex");
+/**
+ * Dynamically resolve authoritative application base URL from incoming request or environment.
+ */
+export function getAppBaseUrl(req?: NextRequest): string {
+  if (req) {
+    const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    const proto =
+      req.headers.get("x-forwarded-proto") ||
+      (host?.includes("localhost") || host?.includes("127.0.0.1") ? "http" : "https");
+    if (host) {
+      return `${proto}://${host}`;
+    }
+  }
+  return process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com";
+}
+
+/**
+ * Generate cryptographically secure OAuth state with embedded return URL.
+ */
+export function generateOAuthState(returnTo: string = "/dashboard"): string {
+  const randomHex = crypto.randomBytes(16).toString("hex");
+  const payload = JSON.stringify({ r: randomHex, next: returnTo });
+  const state = Buffer.from(payload).toString("base64url");
+
   cookies().set({
     name: "oauth_state",
     value: state,
@@ -13,24 +35,56 @@ export function generateOAuthState(): string {
     path: "/",
     maxAge: 60 * 10, // 10 minutes
   });
+
   return state;
 }
 
-export function validateOAuthState(state: string): boolean {
+/**
+ * Validate OAuth state and extract the original destination URL.
+ */
+export function validateOAuthState(state: string): { valid: boolean; returnTo: string } {
   const savedState = cookies().get("oauth_state")?.value;
   cookies().delete("oauth_state");
-  return Boolean(savedState && savedState === state);
+
+  if (!savedState || savedState !== state) {
+    return { valid: false, returnTo: "/dashboard" };
+  }
+
+  try {
+    const raw = Buffer.from(state, "base64url").toString("utf8");
+    const parsed = JSON.parse(raw);
+    const returnTo =
+      typeof parsed.next === "string" && (parsed.next.startsWith("/") || parsed.next.startsWith("https://"))
+        ? parsed.next
+        : "/dashboard";
+    return { valid: true, returnTo };
+  } catch {
+    return { valid: true, returnTo: "/dashboard" };
+  }
 }
 
+// ==========================================
 // Google OAuth Helpers
-export function getGoogleAuthUrl(): string {
-  const state = generateOAuthState();
+// ==========================================
+
+export function isGoogleOAuthConfigured(): boolean {
+  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+
+export function getGoogleAuthUrl(returnTo: string = "/dashboard", baseUrl?: string): string {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    throw new Error("GOOGLE_CLIENT_ID is not configured in environment variables.");
+  }
+
+  const appBase = baseUrl || process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com";
+  const state = generateOAuthState(returnTo);
   const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/v1/oauth/google/callback`;
+  const redirectUri = `${appBase}/api/v1/oauth/google/callback`;
 
   const options = {
     redirect_uri: redirectUri,
-    client_id: process.env.GOOGLE_CLIENT_ID || "",
+    client_id: clientId,
     access_type: "offline",
     response_type: "code",
     prompt: "consent",
@@ -46,7 +100,10 @@ export function getGoogleAuthUrl(): string {
   return `${rootUrl}?${qs}`;
 }
 
-export async function getGoogleUser(code: string): Promise<{
+export async function getGoogleUser(
+  code: string,
+  baseUrl?: string
+): Promise<{
   id: string;
   email: string;
   verified_email: boolean;
@@ -55,7 +112,8 @@ export async function getGoogleUser(code: string): Promise<{
   family_name?: string;
   picture?: string;
 }> {
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/v1/oauth/google/callback`;
+  const appBase = baseUrl || process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com";
+  const redirectUri = `${appBase}/api/v1/oauth/google/callback`;
   const tokenUrl = "https://oauth2.googleapis.com/token";
 
   const tokenResponse = await fetch(tokenUrl, {
@@ -72,24 +130,41 @@ export async function getGoogleUser(code: string): Promise<{
 
   const tokenData = await tokenResponse.json();
   if (!tokenResponse.ok) {
-    throw new Error(tokenData.error_description || "Failed to exchange Google OAuth code.");
+    throw new Error(tokenData.error_description || tokenData.error || "Failed to exchange Google OAuth code.");
   }
 
   const userResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
     headers: { Authorization: `Bearer ${tokenData.access_token}` },
   });
 
+  if (!userResponse.ok) {
+    throw new Error("Failed to fetch Google user profile.");
+  }
+
   return await userResponse.json();
 }
 
+// ==========================================
 // GitHub OAuth Helpers
-export function getGitHubAuthUrl(): string {
-  const state = generateOAuthState();
+// ==========================================
+
+export function isGitHubOAuthConfigured(): boolean {
+  return Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+}
+
+export function getGitHubAuthUrl(returnTo: string = "/dashboard", baseUrl?: string): string {
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  if (!clientId) {
+    throw new Error("GITHUB_CLIENT_ID is not configured in environment variables.");
+  }
+
+  const appBase = baseUrl || process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com";
+  const state = generateOAuthState(returnTo);
   const rootUrl = "https://github.com/login/oauth/authorize";
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/v1/oauth/github/callback`;
+  const redirectUri = `${appBase}/api/v1/oauth/github/callback`;
 
   const options = {
-    client_id: process.env.GITHUB_CLIENT_ID || "",
+    client_id: clientId,
     redirect_uri: redirectUri,
     scope: "read:user user:email",
     state,
@@ -99,7 +174,10 @@ export function getGitHubAuthUrl(): string {
   return `${rootUrl}?${qs}`;
 }
 
-export async function getGitHubUser(code: string): Promise<{
+export async function getGitHubUser(
+  code: string,
+  baseUrl?: string
+): Promise<{
   id: string;
   login: string;
   name: string | null;
@@ -123,7 +201,7 @@ export async function getGitHubUser(code: string): Promise<{
 
   const tokenData = await tokenResponse.json();
   if (!tokenResponse.ok || tokenData.error) {
-    throw new Error(tokenData.error_description || "Failed to exchange GitHub OAuth code.");
+    throw new Error(tokenData.error_description || tokenData.error || "Failed to exchange GitHub OAuth code.");
   }
 
   const userResponse = await fetch("https://api.github.com/user", {
@@ -133,9 +211,13 @@ export async function getGitHubUser(code: string): Promise<{
     },
   });
 
+  if (!userResponse.ok) {
+    throw new Error("Failed to fetch GitHub user profile.");
+  }
+
   const userData = await userResponse.json();
 
-  // If primary email is private, fetch from emails endpoint
+  // If primary email is private on GitHub profile, fetch from verified emails endpoint
   let primaryEmail = userData.email;
   if (!primaryEmail) {
     const emailsResponse = await fetch("https://api.github.com/user/emails", {
@@ -144,10 +226,12 @@ export async function getGitHubUser(code: string): Promise<{
         "User-Agent": "Avyantrix-Auth",
       },
     });
-    const emails = await emailsResponse.json();
-    if (Array.isArray(emails)) {
-      const primary = emails.find((e: any) => e.primary && e.verified);
-      if (primary) primaryEmail = primary.email;
+    if (emailsResponse.ok) {
+      const emails = await emailsResponse.json();
+      if (Array.isArray(emails)) {
+        const primary = emails.find((e: any) => e.primary && e.verified) || emails.find((e: any) => e.verified);
+        if (primary) primaryEmail = primary.email;
+      }
     }
   }
 
