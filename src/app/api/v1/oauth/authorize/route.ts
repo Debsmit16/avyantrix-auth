@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
 import { createAuthorizationCode } from "@/lib/auth/oauth-server";
 
@@ -41,7 +42,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // 2. User is signed in: Issue short-lived, single-use authorization code
+    // 2. Validate Client and check consent requirement
+    const client = await prisma.oAuthClient.findUnique({
+      where: { clientId },
+    });
+
+    if (!client) {
+      return NextResponse.json(
+        { error: "Invalid OAuth client_id" },
+        { status: 400 }
+      );
+    }
+
+    const consented = searchParams.get("consented");
+    if (!client.isFirstParty && consented !== "true") {
+      const consentUrl = new URL("/oauth/consent", req.url);
+      consentUrl.search = searchParams.toString();
+      return NextResponse.redirect(consentUrl);
+    }
+
+    // 3. User is signed in and consented: Issue short-lived, single-use authorization code
     const code = await createAuthorizationCode({
       clientId,
       userId: session.userId,
@@ -51,7 +71,7 @@ export async function GET(req: NextRequest) {
       codeChallengeMethod,
     });
 
-    // 3. Redirect back to downstream product (Builds, Challenges, etc.)
+    // 4. Redirect back to downstream product (Builds, Challenges, etc.)
     const callbackUrl = new URL(redirectUri);
     callbackUrl.searchParams.set("code", code);
     if (state) {

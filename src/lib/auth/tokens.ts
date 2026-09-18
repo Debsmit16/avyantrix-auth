@@ -131,3 +131,66 @@ export async function consumePasswordResetToken(rawToken: string): Promise<void>
     },
   });
 }
+
+/**
+ * Create a single-use, 15-minute TTL magic login token.
+ */
+export async function createMagicLoginToken(userId: string): Promise<string> {
+  // Invalidate any active magic login tokens for this user
+  await prisma.verificationToken.deleteMany({
+    where: {
+      userId,
+      type: "MAGIC_LOGIN",
+    },
+  });
+
+  const rawToken = generateToken();
+  const tokenHash = hashToken(rawToken);
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+  await prisma.verificationToken.create({
+    data: {
+      userId,
+      tokenHash,
+      type: "MAGIC_LOGIN",
+      expiresAt,
+    },
+  });
+
+  return rawToken;
+}
+
+/**
+ * Verify and atomically consume a magic login token.
+ */
+export async function verifyMagicLoginToken(rawToken: string): Promise<{ success: boolean; userId?: string; error?: string }> {
+  const tokenHash = hashToken(rawToken);
+
+  const tokenRecord = await prisma.verificationToken.findFirst({
+    where: {
+      tokenHash,
+      type: "MAGIC_LOGIN",
+    },
+  });
+
+  if (!tokenRecord) {
+    return { success: false, error: "Invalid or non-existent magic login link." };
+  }
+
+  if (tokenRecord.expiresAt < new Date()) {
+    await prisma.verificationToken.delete({ where: { id: tokenRecord.id } }).catch(() => {});
+    return { success: false, error: "Magic login link has expired. Please request a new one." };
+  }
+
+  if (tokenRecord.usedAt) {
+    return { success: false, error: "Magic login link has already been used." };
+  }
+
+  // Atomically delete token to prevent replay
+  await prisma.verificationToken.delete({
+    where: { id: tokenRecord.id },
+  });
+
+  return { success: true, userId: tokenRecord.userId };
+}
+

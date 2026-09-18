@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "./password";
 import { signIdToken, signAccessToken, verifyJwt } from "./jwt";
+import { dispatchWebhookEvent } from "@/lib/webhooks/dispatcher";
 
 /**
  * SHA-256 hash helper for authorization codes and token indexing.
@@ -87,7 +88,7 @@ export interface ExchangeCodeParams {
 }
 
 /**
- * Exchange an authorization code for OpenID Connect ID Token (JWT) & Access Token.
+ * Exchange an authorization code for OpenID Connect ID Token (JWT), Access Token & Rotated Refresh Token.
  */
 export async function exchangeAuthorizationCode({
   clientId,
@@ -236,12 +237,207 @@ export async function exchangeAuthorizationCode({
     jti: crypto.randomBytes(16).toString("hex"),
   });
 
+  // 7. Issue 30-Day Rotated Refresh Token
+  const rawRefreshToken = crypto.randomBytes(40).toString("hex");
+  const refreshTokenHash = hashToken(rawRefreshToken);
+  const familyId = crypto.randomUUID();
+  const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+  await prisma.oAuthRefreshToken.create({
+    data: {
+      tokenHash: refreshTokenHash,
+      clientId,
+      userId: user.id,
+      scope: authCode.scope,
+      familyId,
+      expiresAt: refreshExpiresAt,
+    },
+  });
+
+  dispatchWebhookEvent("oauth.token.issued", {
+    clientId,
+    userId: user.id,
+    scope: authCode.scope,
+    grantType: "authorization_code",
+  }).catch(() => {});
+
   return {
     access_token: accessToken,
     token_type: "Bearer",
     id_token: idToken,
+    refresh_token: rawRefreshToken,
     expires_in: tokenExpiresIn,
     scope: authCode.scope,
+  };
+}
+
+export interface RefreshTokenParams {
+  clientId: string;
+  clientSecret?: string;
+  refreshToken: string;
+}
+
+/**
+ * Exchange a Refresh Token for a new Access Token and newly rotated Refresh Token.
+ * Implements Token Family Replay Detection (RFC 6749 / OAuth 2.1).
+ */
+export async function refreshAccessToken({
+  clientId,
+  clientSecret,
+  refreshToken,
+}: RefreshTokenParams) {
+  const client = await prisma.oAuthClient.findUnique({
+    where: { clientId },
+  });
+
+  if (!client) {
+    throw new Error("Invalid client credentials");
+  }
+
+  if (client.clientSecretHash) {
+    if (!clientSecret) {
+      throw new Error("Missing client_secret");
+    }
+    const validSecret = await verifyPassword(clientSecret, client.clientSecretHash);
+    if (!validSecret) {
+      throw new Error("Invalid client_secret");
+    }
+  }
+
+  const tokenHash = hashToken(refreshToken);
+  const storedToken = await prisma.oAuthRefreshToken.findUnique({
+    where: { tokenHash },
+  });
+
+  if (!storedToken) {
+    throw new Error("Invalid refresh token");
+  }
+
+  // Token Reuse Detection: If an already-revoked token is presented, revoke the entire family!
+  if (storedToken.isRevoked) {
+    await prisma.oAuthRefreshToken.updateMany({
+      where: { familyId: storedToken.familyId },
+      data: { isRevoked: true },
+    });
+    throw new Error("Refresh token reuse detected. Token family revoked for security.");
+  }
+
+  if (storedToken.expiresAt < new Date()) {
+    throw new Error("Refresh token has expired");
+  }
+
+  if (storedToken.clientId !== clientId) {
+    throw new Error("Refresh token was not issued to this client");
+  }
+
+  // Atomically revoke the consumed token
+  await prisma.oAuthRefreshToken.update({
+    where: { id: storedToken.id },
+    data: { isRevoked: true },
+  });
+
+  // Fetch user claims
+  const user = await prisma.user.findUnique({
+    where: { id: storedToken.userId },
+    include: {
+      profile: true,
+      userRoles: {
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: { permission: true },
+              },
+            },
+          },
+        },
+      },
+      verificationBadges: {
+        where: { isActive: true },
+      },
+    },
+  });
+
+  if (!user || user.status !== "ACTIVE") {
+    throw new Error("User account is inactive or disabled");
+  }
+
+  const roles = user.userRoles.map((ur) => ur.role.name);
+  const permissions = Array.from(
+    new Set(
+      user.userRoles.flatMap((ur) =>
+        ur.role.permissions.map((rp) => rp.permission.name)
+      )
+    )
+  );
+
+  const issuer = process.env.APP_URL || "https://auth.avyantrix.com";
+  const now = Math.floor(Date.now() / 1000);
+  const tokenExpiresIn = 3600; // 1 hour
+
+  const idToken = signIdToken({
+    iss: issuer,
+    sub: user.id,
+    aud: clientId,
+    exp: now + tokenExpiresIn,
+    iat: now,
+    auth_time: now,
+    email: user.email,
+    email_verified: user.emailVerified,
+    preferred_username: user.profile?.username || "",
+    name: `${user.profile?.firstName || ""} ${user.profile?.lastName || ""}`.trim(),
+    given_name: user.profile?.firstName || "",
+    family_name: user.profile?.lastName || "",
+    picture: user.profile?.avatarUrl || null,
+    roles,
+    permissions,
+    badges: user.verificationBadges.map((b) => ({
+      category: b.category,
+      badgeLabel: b.badgeLabel,
+      issuedAt: b.issuedAt.toISOString(),
+    })),
+  });
+
+  const accessToken = signAccessToken({
+    iss: issuer,
+    sub: user.id,
+    aud: clientId,
+    scope: storedToken.scope,
+    exp: now + tokenExpiresIn,
+    iat: now,
+    jti: crypto.randomBytes(16).toString("hex"),
+  });
+
+  // Rotate to next generation in same token family
+  const nextRawRefreshToken = crypto.randomBytes(40).toString("hex");
+  const nextTokenHash = hashToken(nextRawRefreshToken);
+  const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  await prisma.oAuthRefreshToken.create({
+    data: {
+      tokenHash: nextTokenHash,
+      clientId,
+      userId: user.id,
+      scope: storedToken.scope,
+      familyId: storedToken.familyId,
+      expiresAt: refreshExpiresAt,
+    },
+  });
+
+  dispatchWebhookEvent("oauth.token.issued", {
+    clientId,
+    userId: user.id,
+    scope: storedToken.scope,
+    grantType: "refresh_token",
+  }).catch(() => {});
+
+  return {
+    access_token: accessToken,
+    token_type: "Bearer",
+    id_token: idToken,
+    refresh_token: nextRawRefreshToken,
+    expires_in: tokenExpiresIn,
+    scope: storedToken.scope,
   };
 }
 

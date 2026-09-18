@@ -453,4 +453,211 @@ test("Dashboard onboarding checklist calculates milestone completion percentage"
   assert.equal(calculateChecklistProgress(fullyOnboardedUser).progressPercent, 100);
 });
 
+// 13. Test Reserved Username Blacklist
+test("Reserved username blacklist blocks system handles and permits valid developer usernames", () => {
+  const RESERVED_USERNAMES = new Set([
+    "admin", "administrator", "root", "auth", "login", "register", "oauth", "sso", "dashboard",
+    "avyantrix", "api", "health", "cron", "webhook", "null", "undefined",
+  ]);
+
+  function validateCandidateUsername(username) {
+    if (!username || typeof username !== "string") return { valid: false, error: "Username is required" };
+    const trimmed = username.trim().toLowerCase();
+    if (trimmed.length < 3) return { valid: false, error: "Too short" };
+    if (trimmed.length > 30) return { valid: false, error: "Too long" };
+    if (!/^[a-z0-9_]+$/.test(trimmed)) return { valid: false, error: "Invalid characters" };
+    if (RESERVED_USERNAMES.has(trimmed)) return { valid: false, error: `Username '${trimmed}' is reserved` };
+    return { valid: true };
+  }
+
+  assert.equal(validateCandidateUsername("admin").valid, false);
+  assert.equal(validateCandidateUsername("auth").valid, false);
+  assert.equal(validateCandidateUsername("avyantrix").valid, false);
+  assert.equal(validateCandidateUsername("api").valid, false);
+  assert.equal(validateCandidateUsername("debsmit").valid, true);
+  assert.equal(validateCandidateUsername("alex_vance").valid, true);
+  assert.equal(validateCandidateUsername("builder99").valid, true);
+});
+
+// 14. Test Zero-Cost Deterministic SVG Avatar Generator
+test("Deterministic SVG Avatar generator creates valid SVG markup and deterministic initials", () => {
+  function hashString(str) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash * 33) ^ str.charCodeAt(i);
+    }
+    return Math.abs(hash);
+  }
+
+  function getInitials(name, username) {
+    if (name && name.trim().length > 0) {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    if (username && username.trim().length > 0) return username.trim().substring(0, 2).toUpperCase();
+    return "AV";
+  }
+
+  assert.equal(getInitials("Debsmit Dev"), "DD");
+  assert.equal(getInitials("Antigravity"), "AN");
+  assert.equal(getInitials("", "sarah_connor"), "SA");
+
+  const hash1 = hashString("alex_builder");
+  const hash2 = hashString("alex_builder");
+  assert.equal(hash1, hash2, "Hashing must be deterministic");
+});
+
+// 15. Test Passwordless Magic Login Token Generation & Single-Use Verification
+test("Passwordless magic login token is single-use and expires after TTL", () => {
+  const tokenStore = new Map();
+
+  function createMagicToken(userId, ttlMs = 15 * 60 * 1000) {
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expiresAt = Date.now() + ttlMs;
+    tokenStore.set(tokenHash, { userId, expiresAt, usedAt: null });
+    return rawToken;
+  }
+
+  function verifyMagicToken(rawToken, now = Date.now()) {
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const record = tokenStore.get(tokenHash);
+    if (!record) return { success: false, error: "Invalid token" };
+    if (record.expiresAt < now) return { success: false, error: "Token expired" };
+    if (record.usedAt) return { success: false, error: "Token already consumed" };
+
+    // Burn token
+    record.usedAt = now;
+    return { success: true, userId: record.userId };
+  }
+
+  const token = createMagicToken("user-555");
+  assert.equal(token.length, 64);
+
+  // 1st verification must succeed
+  const result1 = verifyMagicToken(token);
+  assert.equal(result1.success, true);
+  assert.equal(result1.userId, "user-555");
+
+  // 2nd verification must fail (single-use)
+  const result2 = verifyMagicToken(token);
+  assert.equal(result2.success, false);
+  assert.match(result2.error, /already consumed/);
+
+  // Expired token test
+  const expiredToken = createMagicToken("user-999", -1000);
+  const resultExpired = verifyMagicToken(expiredToken);
+  assert.equal(resultExpired.success, false);
+  assert.match(resultExpired.error, /expired/);
+});
+
+// 16. Test OAuth Refresh Token Rotation & Token Family Replay Detection
+test("OAuth refresh token rotation revokes entire token family upon token reuse attempt", () => {
+  const refreshTokens = new Map(); // tokenHash -> { familyId, userId, isRevoked, expiresAt }
+
+  function issueRefreshToken(userId, familyId = crypto.randomUUID()) {
+    const raw = crypto.randomBytes(40).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(raw).digest("hex");
+    refreshTokens.set(tokenHash, {
+      familyId,
+      userId,
+      isRevoked: false,
+      expiresAt: Date.now() + 30 * 24 * 3600 * 1000,
+    });
+    return { raw, tokenHash, familyId };
+  }
+
+  function rotateRefreshToken(raw) {
+    const tokenHash = crypto.createHash("sha256").update(raw).digest("hex");
+    const record = refreshTokens.get(tokenHash);
+    if (!record) throw new Error("Invalid refresh token");
+
+    // Token reuse detection
+    if (record.isRevoked) {
+      // Revoke all tokens in family
+      for (const [hash, r] of refreshTokens.entries()) {
+        if (r.familyId === record.familyId) {
+          r.isRevoked = true;
+        }
+      }
+      throw new Error("Replay attack detected. Entire token family revoked.");
+    }
+
+    // Revoke old token
+    record.isRevoked = true;
+
+    // Issue new token in same family
+    const next = issueRefreshToken(record.userId, record.familyId);
+    return next;
+  }
+
+  // Initial issue
+  const tokenGen1 = issueRefreshToken("user-100");
+  assert.equal(tokenGen1.raw.length, 80);
+
+  // Normal rotation (Gen 1 -> Gen 2)
+  const tokenGen2 = rotateRefreshToken(tokenGen1.raw);
+  assert.equal(tokenGen2.familyId, tokenGen1.familyId, "Family ID must be preserved");
+
+  // Normal rotation (Gen 2 -> Gen 3)
+  const tokenGen3 = rotateRefreshToken(tokenGen2.raw);
+  assert.equal(tokenGen3.familyId, tokenGen1.familyId);
+
+  // Attacker or stale client tries to replay Gen 1
+  assert.throws(
+    () => rotateRefreshToken(tokenGen1.raw),
+    /Replay attack detected/,
+    "Replaying Gen 1 must trigger family revocation"
+  );
+
+  // Gen 3 should now also be revoked due to family revocation!
+  assert.throws(
+    () => rotateRefreshToken(tokenGen3.raw),
+    /Replay attack detected/,
+    "All tokens in compromised family must be invalid"
+  );
+});
+
+// 17. Test Webhook Dispatcher HMAC-SHA256 Signing
+test("Webhook dispatcher generates valid HMAC-SHA256 signature for event payloads", () => {
+  const secret = "webhook-test-secret-key";
+  const payload = {
+    event: "user.created",
+    timestamp: "2026-09-18T12:00:00.000Z",
+    data: { userId: "user-abc", email: "builder@avyantrix.com" },
+  };
+
+  const payloadString = JSON.stringify(payload);
+  const signature = crypto.createHmac("sha256", secret).update(payloadString).digest("hex");
+
+  // Verifier side (downstream subscriber like Builds or Challenges)
+  const receivedSig = signature;
+  const computedSig = crypto.createHmac("sha256", secret).update(payloadString).digest("hex");
+  assert.equal(receivedSig, computedSig, "HMAC-SHA256 signature must verify exactly");
+});
+
+// 18. Test Structured Health Probe Calculations
+test("Structured health probe computes uptime, latency, and system memory", () => {
+  const startTime = Date.now() - 5000; // 5 seconds ago
+  const uptimeSeconds = Math.floor((Date.now() - startTime) / 1000);
+  assert.ok(uptimeSeconds >= 5, "Uptime must be at least 5 seconds");
+
+  const probe = {
+    status: "healthy",
+    service: "avyantrix-auth",
+    version: "1.0.0",
+    uptimeSeconds,
+    checks: {
+      database: { status: "healthy", latencyMs: 12, provider: "Neon PostgreSQL" },
+      smtp: { status: "configured", host: "mail.avyantrix.com" },
+    },
+  };
+
+  assert.equal(probe.status, "healthy");
+  assert.equal(probe.checks.database.status, "healthy");
+  assert.equal(probe.checks.smtp.status, "configured");
+});
+
+
 

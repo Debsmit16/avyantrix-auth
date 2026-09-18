@@ -3,11 +3,13 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/rbac";
 import { logSecurityEvent } from "@/lib/auth/audit";
+import { validateUsername } from "@/lib/auth/reserved-usernames";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const updateProfileSchema = z.object({
+  username: z.string().min(3).max(30).optional(),
   firstName: z.string().min(1).max(100).optional(),
   lastName: z.string().max(100).optional(),
   headline: z.string().max(200).optional().nullable(),
@@ -117,8 +119,29 @@ export async function PATCH(req: NextRequest) {
 
     const data = parseResult.data;
 
+    // Handle username update if provided
+    if (data.username !== undefined) {
+      const normalizedUsername = data.username.toLowerCase().trim();
+      const validation = validateUsername(normalizedUsername);
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
+
+      const existing = await prisma.userProfile.findUnique({
+        where: { username: normalizedUsername },
+      });
+
+      if (existing && existing.userId !== session.userId) {
+        return NextResponse.json(
+          { error: "This username is already taken. Please choose another." },
+          { status: 409 }
+        );
+      }
+    }
+
     // Update profile data in Neon PostgreSQL
     const updateData: any = {};
+    if (data.username !== undefined) updateData.username = data.username.toLowerCase().trim();
     if (data.firstName !== undefined) updateData.firstName = data.firstName.trim();
     if (data.lastName !== undefined) updateData.lastName = data.lastName.trim();
     if (data.headline !== undefined) updateData.headline = data.headline;

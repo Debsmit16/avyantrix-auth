@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Shield, Lock, Mail, AlertCircle, ArrowRight, Loader2, KeyRound, ArrowLeft } from "lucide-react";
+import { Shield, Lock, Mail, AlertCircle, ArrowRight, Loader2, KeyRound, ArrowLeft, Sparkles, Check } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -15,6 +15,10 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(searchParams.get("error") || "");
   const [loading, setLoading] = useState(false);
+
+  // Auth Method: password vs magic-link
+  const [authMethod, setAuthMethod] = useState<"password" | "magic">("password");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   // 2FA Challenge State
   const [twoFactorMode, setTwoFactorMode] = useState(false);
@@ -53,6 +57,34 @@ function LoginForm() {
       await refreshSession();
       const nextUrl = searchParams.get("next") || "/dashboard";
       router.push(nextUrl);
+    } catch (err) {
+      setError("An unexpected network error occurred. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  const handleMagicLinkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/v1/auth/magic-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to send magic link.");
+        setLoading(false);
+        return;
+      }
+
+      setMagicLinkSent(true);
+      setLoading(false);
     } catch (err) {
       setError("An unexpected network error occurred. Please try again.");
       setLoading(false);
@@ -240,66 +272,163 @@ function LoginForm() {
               </div>
             </div>
 
-            {/* Email / Password Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Email Address
-                </label>
-                <div className="relative mt-1">
-                  <Mail className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="developer@avyantrix.com"
-                    className="w-full rounded-xl border border-zinc-200 bg-white py-2 pl-9 pr-3 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Password
-                  </label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs text-red-600 hover:text-red-500 dark:text-red-400"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative mt-1">
-                  <Lock className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full rounded-xl border border-zinc-200 bg-white py-2 pl-9 pr-3 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                  />
-                </div>
-              </div>
-
+            {/* Auth Method Tabs */}
+            <div className="flex rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800/70 border border-zinc-200/60 dark:border-zinc-800">
               <button
-                type="submit"
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 py-2.5 px-4 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all shadow-xs"
+                type="button"
+                onClick={() => {
+                  setAuthMethod("password");
+                  setMagicLinkSent(false);
+                  setError("");
+                }}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all ${
+                  authMethod === "password"
+                    ? "bg-white text-zinc-900 shadow-2xs dark:bg-zinc-900 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+                }`}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Signing In...
-                  </>
-                ) : (
-                  <>
-                    Sign In to Avyantrix <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
+                Password
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMethod("magic");
+                  setError("");
+                }}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                  authMethod === "magic"
+                    ? "bg-white text-zinc-900 shadow-2xs dark:bg-zinc-900 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+                }`}
+              >
+                <Sparkles className="h-3 w-3 text-red-500" /> Magic Link
+              </button>
+            </div>
+
+            {authMethod === "password" ? (
+              /* Email / Password Form */
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    Email Address
+                  </label>
+                  <div className="relative mt-1">
+                    <Mail className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="developer@avyantrix.com"
+                      className="w-full rounded-xl border border-zinc-200 bg-white py-2 pl-9 pr-3 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                      Password
+                    </label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs text-red-600 hover:text-red-500 dark:text-red-400"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="relative mt-1">
+                    <Lock className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-xl border border-zinc-200 bg-white py-2 pl-9 pr-3 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 py-2.5 px-4 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all shadow-xs"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" /> Signing In...
+                    </>
+                  ) : (
+                    <>
+                      Sign In to Avyantrix <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            ) : (
+              /* Passwordless Magic Link Form */
+              <div className="space-y-4">
+                {magicLinkSent ? (
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/40 p-4 text-center dark:border-emerald-900/30 dark:bg-emerald-950/20 space-y-2">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-xs font-bold text-zinc-900 dark:text-white">
+                      Check your email inbox
+                    </h3>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      If an account matches <strong>{email}</strong>, we sent a one-click login link. The link expires in 15 minutes.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setMagicLinkSent(false)}
+                      className="text-xs text-red-600 hover:underline dark:text-red-400 font-medium pt-1 inline-block"
+                    >
+                      Send to a different email
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        Email Address
+                      </label>
+                      <div className="relative mt-1">
+                        <Mail className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="developer@avyantrix.com"
+                          className="w-full rounded-xl border border-zinc-200 bg-white py-2 pl-9 pr-3 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                        />
+                      </div>
+                      <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                        We&apos;ll send a passwordless one-click authentication link to this address.
+                      </p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 py-2.5 px-4 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all shadow-xs"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" /> Sending Link...
+                        </>
+                      ) : (
+                        <>
+                          Send Magic Link <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
 
             {/* Footer Link */}
             <div className="text-center text-xs text-zinc-500 dark:text-zinc-400">

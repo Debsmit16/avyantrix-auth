@@ -381,3 +381,62 @@ export async function sendSecurityAlertEmail(
     return false;
   }
 }
+
+export async function sendMagicLinkEmail(to: string, name: string, token: string): Promise<boolean> {
+  const magicUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com"}/magic-login?token=${token}`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0A0A0B; color: #FFFFFF; margin: 0; padding: 40px 20px; }
+    .container { max-width: 540px; margin: 0 auto; background: #121214; border: 1px solid #27272A; border-radius: 12px; padding: 36px; }
+    .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .logo-img { width: 36px; height: 36px; border-radius: 8px; border: 1px solid #27272A; background-color: #000000; vertical-align: middle; }
+    .logo-text { font-size: 18px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.5px; display: inline-block; vertical-align: middle; margin-left: 10px; }
+    .logo-text span { color: #EF4444; }
+    h1 { font-size: 22px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #FFFFFF; }
+    p { font-size: 15px; line-height: 1.6; color: #A1A1AA; margin-bottom: 24px; }
+    .button { display: inline-block; background-color: #EF4444; color: #FFFFFF !important; padding: 12px 24px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px; }
+    .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 12px; color: #71717A; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo-container">
+      <img src="${LOGO_URL}" alt="Avyantrix" class="logo-img" />
+      <div class="logo-text">AVYANTRIX<span>.</span> AUTH</div>
+    </div>
+    <h1>Sign in with Magic Link</h1>
+    <p>Hello ${name || "Builder"},</p>
+    <p>Click the button below to sign in directly to your Avyantrix ID account without a password:</p>
+    <a href="${magicUrl}" class="button" target="_blank">Sign In to Avyantrix</a>
+    <p style="margin-top: 24px; font-size: 13px; color: #71717A;">This magic link will expire in 15 minutes and can only be used once. If you did not request this login link, you can safely ignore this email.</p>
+    <div class="footer">
+      <p style="margin: 0 0 8px 0; color: #71717A; font-size: 11px;">Please do not reply to this email. This address is automated and unmonitored. Direct replies cannot be received.</p>
+      &copy; ${new Date().getFullYear()} Avyantrix Engineering Collective. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  try {
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: getFromHeader(),
+      to,
+      replyTo: "noreply@avyantrix.com",
+      headers: NOREPLY_HEADERS,
+      subject: "Your Avyantrix ID Magic Login Link",
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send magic link email:", (error as Error).message);
+    return false;
+  }
+}
+

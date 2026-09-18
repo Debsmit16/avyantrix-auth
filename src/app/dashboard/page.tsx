@@ -38,6 +38,7 @@ import {
   Circle,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { getAvatarDataUrl } from "@/lib/avatar";
 
 type ActiveRoleView = "BUILDER" | "MENTOR" | "PROBLEM_OWNER" | "CHALLENGE_ORGANIZER";
 
@@ -116,18 +117,14 @@ function DashboardContent() {
       <div className="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/90 p-6 shadow-xs dark:border-zinc-800/80 dark:bg-zinc-900/90 sm:p-8 backdrop-blur-md">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-start sm:items-center gap-5">
-            {profileData?.profile?.avatarUrl ? (
-              <img
-                src={profileData.profile.avatarUrl}
-                alt={user.firstName}
-                className="h-16 w-16 rounded-2xl border border-zinc-200 object-cover dark:border-zinc-700 shadow-xs"
-              />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-950 text-xl font-bold text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-xs">
-                {user.firstName[0]}
-                {user.lastName[0] || ""}
-              </div>
-            )}
+            <img
+              src={
+                profileData?.profile?.avatarUrl ||
+                getAvatarDataUrl(`${user.firstName} ${user.lastName}`, user.username, 128)
+              }
+              alt={user.firstName}
+              className="h-16 w-16 rounded-2xl border border-zinc-200 object-cover dark:border-zinc-700 shadow-xs"
+            />
             <div className="space-y-1">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">

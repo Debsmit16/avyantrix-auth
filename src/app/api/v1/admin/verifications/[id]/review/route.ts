@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/rbac";
 import { logSecurityEvent } from "@/lib/auth/audit";
 import { sendVerificationApprovedEmail, sendVerificationRejectedEmail } from "@/lib/mail/mailer";
+import { dispatchWebhookEvent } from "@/lib/webhooks/dispatcher";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -167,6 +168,21 @@ export async function POST(
         decision,
       },
     });
+
+    // Asynchronously dispatch real-time webhook event to downstream ecosystem subscribers
+    dispatchWebhookEvent(
+      decision === "VERIFIED" ? "verification.approved" : "verification.rejected",
+      {
+        requestId,
+        userId: request.userId,
+        email: request.user?.email,
+        username: request.user?.profile?.username,
+        category: request.category,
+        badgeLabel: label,
+        decision,
+        reviewerId: reviewer.userId,
+      }
+    ).catch(() => {});
 
     return NextResponse.json({
       message: `Verification request ${decision.toLowerCase()} successfully.`,

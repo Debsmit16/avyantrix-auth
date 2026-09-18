@@ -22,6 +22,13 @@ import {
   FileText,
   BadgeCheck,
   AlertTriangle,
+  KeyRound,
+  Plus,
+  Copy,
+  Trash2,
+  Key,
+  Globe,
+  Layers,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
@@ -32,7 +39,7 @@ export default function AdminPage() {
   const { user, loading, hasRole } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<"verifications" | "users" | "audit">("verifications");
+  const [activeTab, setActiveTab] = useState<"verifications" | "users" | "apps" | "audit">("verifications");
 
   // Verification Lineup State
   const [selectedLineup, setSelectedLineup] = useState<LineupCategory>("ALL");
@@ -44,6 +51,40 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // OAuth Clients State
+  const [clients, setClients] = useState<any[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [newAppModalOpen, setNewAppModalOpen] = useState(false);
+  const [newAppLoading, setNewAppLoading] = useState(false);
+  const [newAppForm, setNewAppForm] = useState({
+    clientId: "",
+    name: "",
+    redirectUris: "",
+    allowedOrigins: "",
+    isFirstParty: true,
+    isConfidential: true,
+  });
+  const [createdCredentialsModal, setCreatedCredentialsModal] = useState<{
+    isOpen: boolean;
+    clientId: string;
+    name: string;
+    rawClientSecret: string | null;
+  }>({
+    isOpen: false,
+    clientId: "",
+    name: "",
+    rawClientSecret: null,
+  });
+  const [deleteClientModal, setDeleteClientModal] = useState<{
+    isOpen: boolean;
+    client: any | null;
+  }>({
+    isOpen: false,
+    client: null,
+  });
+  const [deleteClientLoading, setDeleteClientLoading] = useState(false);
+  const [copiedSecret, setCopiedSecret] = useState(false);
 
   // Audit Logs State
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -90,6 +131,19 @@ export default function AdminPage() {
     }
   };
 
+  const loadClients = async () => {
+    setLoadingClients(true);
+    try {
+      const res = await fetch("/api/v1/admin/oauth-clients");
+      const data = await res.json();
+      if (data.clients) setClients(data.clients);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingClients(false);
+    }
+  };
+
   const loadAuditLogs = async () => {
     setLoadingAudit(true);
     try {
@@ -107,6 +161,7 @@ export default function AdminPage() {
     if (user && hasRole("ADMIN")) {
       if (activeTab === "verifications") loadVerifications();
       if (activeTab === "users") loadUsers();
+      if (activeTab === "apps") loadClients();
       if (activeTab === "audit") loadAuditLogs();
     }
   }, [user, hasRole, activeTab, selectedLineup, selectedStatus]);
@@ -258,6 +313,94 @@ export default function AdminPage() {
     }
   };
 
+  // Create OAuth Application
+  const handleCreateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewAppLoading(true);
+    setActionError("");
+    setActionSuccess("");
+
+    const redirectUris = newAppForm.redirectUris
+      .split("\n")
+      .map((u) => u.trim())
+      .filter(Boolean);
+    const allowedOrigins = newAppForm.allowedOrigins
+      .split("\n")
+      .map((u) => u.trim())
+      .filter(Boolean);
+
+    try {
+      const res = await fetch("/api/v1/admin/oauth-clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: newAppForm.clientId.trim().toLowerCase(),
+          name: newAppForm.name.trim(),
+          redirectUris,
+          allowedOrigins,
+          isFirstParty: newAppForm.isFirstParty,
+          isConfidential: newAppForm.isConfidential,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(data.error || "Failed to create application.");
+      } else {
+        setNewAppModalOpen(false);
+        setNewAppForm({
+          clientId: "",
+          name: "",
+          redirectUris: "",
+          allowedOrigins: "",
+          isFirstParty: true,
+          isConfidential: true,
+        });
+        loadClients();
+        if (data.rawClientSecret) {
+          setCreatedCredentialsModal({
+            isOpen: true,
+            clientId: data.client.clientId,
+            name: data.client.name,
+            rawClientSecret: data.rawClientSecret,
+          });
+        } else {
+          setActionSuccess(`OAuth Application '${data.client.name}' registered successfully.`);
+        }
+      }
+    } catch (err) {
+      setActionError("Network error creating OAuth client.");
+    } finally {
+      setNewAppLoading(false);
+    }
+  };
+
+  // Delete OAuth Application
+  const executeDeleteClient = async () => {
+    if (!deleteClientModal.client) return;
+    setDeleteClientLoading(true);
+    setActionError("");
+    setActionSuccess("");
+
+    try {
+      const res = await fetch(`/api/v1/admin/oauth-clients/${deleteClientModal.client.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(data.error || "Failed to delete client.");
+      } else {
+        setActionSuccess(data.message || "Application deleted.");
+        setDeleteClientModal({ isOpen: false, client: null });
+        loadClients();
+      }
+    } catch (err) {
+      setActionError("Network error deleting application.");
+    } finally {
+      setDeleteClientLoading(false);
+    }
+  };
+
   if (loading || !user || !hasRole("ADMIN")) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
@@ -292,12 +435,12 @@ export default function AdminPage() {
             Avyantrix Super-Admin Console
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Moderation center for multi-role verification queues, RBAC role provisioning, and identity audit streams
+            Moderation center for multi-role verification queues, RBAC role provisioning, OAuth applications, and identity audit streams
           </p>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900 flex-wrap">
           <button
             onClick={() => setActiveTab("verifications")}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
@@ -318,8 +461,20 @@ export default function AdminPage() {
                 : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
             }`}
           >
-            <Users className="h-3.5 w-3.5 text-zinc-500" />
-            User RBAC
+            <Users className="h-3.5 w-3.5 text-red-500" />
+            User Management
+          </button>
+
+          <button
+            onClick={() => setActiveTab("apps")}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              activeTab === "apps"
+                ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white"
+                : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            <KeyRound className="h-3.5 w-3.5 text-red-500" />
+            OAuth Apps
           </button>
 
           <button
@@ -330,12 +485,13 @@ export default function AdminPage() {
                 : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
             }`}
           >
-            <Activity className="h-3.5 w-3.5 text-zinc-500" />
-            Audit Logs
+            <Activity className="h-3.5 w-3.5 text-red-500" />
+            Security Audit
           </button>
         </div>
       </div>
 
+      {/* Global Status Banner */}
       {actionSuccess && (
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4 text-xs font-medium text-green-800 dark:border-green-900/40 dark:bg-green-950/30 dark:text-green-400">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -350,23 +506,21 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Tab 1: Segregated Verification Queue Lineup */}
+      {/* Tab 1: Verification Queue */}
       {activeTab === "verifications" && (
         <div className="space-y-4">
-          {/* Lineup Category Selector Tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Category Selector Tabs */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 px-2">Lineup:</span>
-              
               <button
                 onClick={() => setSelectedLineup("ALL")}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                   selectedLineup === "ALL"
-                    ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"
+                    ? "bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900"
                     : "bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300"
                 }`}
               >
-                All Submissions
+                All Tracks
               </button>
 
               <button
@@ -544,22 +698,25 @@ export default function AdminPage() {
                           {req.evidence.map((ev: any) => (
                             <div
                               key={ev.id}
-                              className="flex items-center justify-between p-3 rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                              className="flex items-center justify-between p-2.5 rounded-lg border border-zinc-100 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 text-xs"
                             >
-                              <div className="pr-2">
-                                <span className="text-xs font-semibold text-zinc-900 dark:text-white block">
+                              <div className="truncate pr-2">
+                                <span className="font-semibold text-zinc-900 dark:text-white block truncate">
                                   {ev.title}
                                 </span>
-                                <span className="text-[10px] text-zinc-500">{ev.evidenceType}</span>
+                                <span className="text-[10px] text-zinc-400 font-mono">
+                                  {ev.evidenceType}
+                                </span>
                               </div>
+
                               {ev.evidenceUrl && (
                                 <a
                                   href={ev.evidenceUrl}
                                   target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 rounded bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 dark:bg-zinc-800 dark:text-red-400 transition-colors shrink-0"
+                                  rel="noreferrer"
+                                  className="shrink-0 inline-flex items-center gap-1 rounded bg-zinc-200/60 hover:bg-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200"
                                 >
-                                  Inspect <ExternalLink className="h-3 w-3" />
+                                  View <ExternalLink className="h-3 w-3" />
                                 </a>
                               )}
                             </div>
@@ -567,45 +724,37 @@ export default function AdminPage() {
                         </div>
                       </div>
                     )}
-
-                    {req.reviewNotes && (
-                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-2.5 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300">
-                        <strong>Review Feedback:</strong> {req.reviewNotes}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="py-12 text-center text-xs text-zinc-400">
-                No submissions found matching the selected lineup and status filter.
+              <div className="py-12 text-center text-xs text-zinc-500">
+                No verification requests matching the selected filters.
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Tab 2: User RBAC Management */}
+      {/* Tab 2: User Management */}
       {activeTab === "users" && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+              User Roster & Persona Governance ({users.length})
+            </h2>
+
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400" />
               <input
                 type="text"
+                placeholder="Search username, email..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && loadUsers()}
-                placeholder="Search username, email, name..."
-                className="w-full rounded-lg border border-zinc-200 bg-white py-2 pl-9 pr-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                className="w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-8 pr-3 py-1.5 text-xs text-zinc-900 focus:border-red-500 focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
               />
             </div>
-            <button
-              onClick={loadUsers}
-              className="rounded-lg bg-zinc-950 px-4 py-2 text-xs font-semibold text-white dark:bg-white dark:text-zinc-950"
-            >
-              Search Users
-            </button>
           </div>
 
           {loadingUsers ? (
@@ -617,8 +766,8 @@ export default function AdminPage() {
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 uppercase">
                   <tr>
-                    <th className="py-3 px-2">User Handle</th>
-                    <th className="py-3 px-2">Email / Status</th>
+                    <th className="py-3 px-2">User</th>
+                    <th className="py-3 px-2">Email & Status</th>
                     <th className="py-3 px-2">Assigned Roles (Click to Toggle)</th>
                     <th className="py-3 px-2">Active Sessions</th>
                     <th className="py-3 px-2 text-right">Moderation</th>
@@ -693,7 +842,113 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Tab 3: Security Audit Trail */}
+      {/* Tab 3: OAuth Applications Manager */}
+      {activeTab === "apps" && (
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-red-500" />
+                Registered OAuth 2.0 / OIDC Applications ({clients.length})
+              </h2>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Manage ecosystem products (Builds, Challenges) and third-party developer integrations
+              </p>
+            </div>
+
+            <button
+              onClick={() => setNewAppModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700 shadow-sm transition-colors"
+            >
+              <Plus className="h-4 w-4" /> Register New Application
+            </button>
+          </div>
+
+          {loadingClients ? (
+            <div className="py-12 text-center">
+              <Loader2 className="mx-auto h-6 w-6 animate-spin text-red-500" />
+            </div>
+          ) : clients.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 uppercase">
+                  <tr>
+                    <th className="py-3 px-2">Application Name & Client ID</th>
+                    <th className="py-3 px-2">Redirect URIs & Allowed Origins</th>
+                    <th className="py-3 px-2">Type & Security</th>
+                    <th className="py-3 px-2">Activity Stats</th>
+                    <th className="py-3 px-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {clients.map((c) => (
+                    <tr key={c.id}>
+                      <td className="py-3 px-2">
+                        <span className="font-bold text-zinc-900 dark:text-white block">{c.name}</span>
+                        <span className="font-mono text-xs text-red-600 dark:text-red-400 select-all">
+                          {c.clientId}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 max-w-xs">
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-zinc-400 font-semibold uppercase block">Redirects:</span>
+                          {c.redirectUris.map((uri: string, idx: number) => (
+                            <span key={idx} className="font-mono text-[11px] text-zinc-600 dark:text-zinc-300 block truncate">
+                              {uri}
+                            </span>
+                          ))}
+                          {c.allowedOrigins.length > 0 && (
+                            <>
+                              <span className="text-[10px] text-zinc-400 font-semibold uppercase block pt-1">Origins:</span>
+                              <span className="font-mono text-[10px] text-zinc-500 block truncate">
+                                {c.allowedOrigins.join(", ")}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="flex flex-col gap-1 items-start">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                              c.isFirstParty
+                                ? "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+                                : "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400"
+                            }`}
+                          >
+                            {c.isFirstParty ? "First-Party (Auto-Consent)" : "Third-Party (Prompt)"}
+                          </span>
+                          <span className="font-mono text-[10px] text-zinc-500">
+                            {c.isConfidential ? "🔒 Confidential (Secret)" : "🔓 Public (PKCE S256)"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-2 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
+                        <div>Codes: {c.stats.totalCodes}</div>
+                        <div>Refresh Tokens: {c.stats.activeRefreshTokens}</div>
+                      </td>
+                      <td className="py-3 px-2 text-right">
+                        <button
+                          onClick={() => setDeleteClientModal({ isOpen: true, client: c })}
+                          className="text-xs text-red-600 hover:underline dark:text-red-400 font-medium"
+                        >
+                          Revoke App
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-12 text-center text-xs text-zinc-500">
+              No OAuth applications registered yet.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 4: Security Audit Trail */}
       {activeTab === "audit" && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white mb-4">
@@ -854,6 +1109,227 @@ export default function AdminPage() {
               >
                 {statusLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 {statusModal.newStatus === "SUSPENDED" ? "Suspend Account" : "Reactivate Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Register New OAuth Application */}
+      {newAppModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-red-600" />
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                  Register New OAuth 2.0 Application
+                </h3>
+              </div>
+              <button
+                onClick={() => setNewAppModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-600 text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateClient} className="space-y-3.5">
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Application Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Avyantrix Challenges"
+                  value={newAppForm.name}
+                  onChange={(e) => setNewAppForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-900 focus:border-red-500 focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Client ID (lowercase, hyphens/underscores)
+                </label>
+                <input
+                  type="text"
+                  required
+                  pattern="[a-z0-9_-]+"
+                  placeholder="e.g. avyantrix_challenges"
+                  value={newAppForm.clientId}
+                  onChange={(e) => setNewAppForm((prev) => ({ ...prev, clientId: e.target.value }))}
+                  className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 font-mono text-xs text-zinc-900 focus:border-red-500 focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Redirect Callback URIs (one per line)
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  placeholder="https://challenges.avyantrix.com/api/auth/callback"
+                  value={newAppForm.redirectUris}
+                  onChange={(e) => setNewAppForm((prev) => ({ ...prev, redirectUris: e.target.value }))}
+                  className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-2.5 font-mono text-xs text-zinc-900 focus:border-red-500 focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Allowed CORS Origins (one per line)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="https://challenges.avyantrix.com"
+                  value={newAppForm.allowedOrigins}
+                  onChange={(e) => setNewAppForm((prev) => ({ ...prev, allowedOrigins: e.target.value }))}
+                  className="w-full rounded-lg border border-zinc-200 bg-zinc-50 p-2.5 font-mono text-xs text-zinc-900 focus:border-red-500 focus:bg-white focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                />
+              </div>
+
+              <div className="flex items-center gap-6 pt-1 text-xs">
+                <label className="flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={newAppForm.isFirstParty}
+                    onChange={(e) => setNewAppForm((prev) => ({ ...prev, isFirstParty: e.target.checked }))}
+                    className="rounded border-zinc-300 text-red-600 focus:ring-red-500"
+                  />
+                  <span>First-Party (Skip Consent)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
+                  <input
+                    type="checkbox"
+                    checked={newAppForm.isConfidential}
+                    onChange={(e) => setNewAppForm((prev) => ({ ...prev, isConfidential: e.target.checked }))}
+                    className="rounded border-zinc-300 text-red-600 focus:ring-red-500"
+                  />
+                  <span>Confidential (Generate Secret)</span>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setNewAppModalOpen(false)}
+                  className="rounded-lg border border-zinc-200 px-3.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={newAppLoading}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {newAppLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Register Application
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Newly Created Application Credentials */}
+      {createdCredentialsModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+              <CheckCircle2 className="h-5 w-5" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                Application Credentials Generated
+              </h3>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-300">
+              Save your Client Secret now. For security, it is stored as an Argon2id hash and <strong>will never be displayed again</strong>:
+            </p>
+
+            <div className="space-y-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3.5 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-800/80">
+              <div>
+                <span className="text-[10px] text-zinc-400 font-semibold block uppercase">Client ID</span>
+                <span className="text-zinc-900 dark:text-white font-bold select-all">
+                  {createdCredentialsModal.clientId}
+                </span>
+              </div>
+
+              {createdCredentialsModal.rawClientSecret && (
+                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-700">
+                  <span className="text-[10px] text-zinc-400 font-semibold block uppercase">Client Secret</span>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <span className="text-red-600 dark:text-red-400 font-bold select-all break-all">
+                      {createdCredentialsModal.rawClientSecret}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdCredentialsModal.rawClientSecret || "");
+                        setCopiedSecret(true);
+                        setTimeout(() => setCopiedSecret(false), 2000);
+                      }}
+                      className="shrink-0 p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
+                      title="Copy Secret"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {copiedSecret && (
+              <p className="text-[11px] font-semibold text-green-600 dark:text-green-400 text-center">
+                Copied to clipboard!
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setCreatedCredentialsModal({ isOpen: false, clientId: "", name: "", rawClientSecret: null })}
+              className="w-full rounded-lg bg-zinc-900 py-2 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            >
+              I have saved my Client Secret
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Revoke OAuth Client Confirmation */}
+      {deleteClientModal.isOpen && deleteClientModal.client && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-2.5 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                Revoke OAuth Application?
+              </h3>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-300">
+              Are you sure you want to revoke <strong>{deleteClientModal.client.name}</strong> (<code>{deleteClientModal.client.clientId}</code>)? All active tokens and integrations using this client will stop working immediately.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setDeleteClientModal({ isOpen: false, client: null })}
+                className="rounded-lg border border-zinc-200 px-3.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeDeleteClient}
+                disabled={deleteClientLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteClientLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Revoke Application
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyEmailToken } from "@/lib/auth/tokens";
 import { logSecurityEvent } from "@/lib/auth/audit";
+import { dispatchWebhookEvent } from "@/lib/webhooks/dispatcher";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -39,6 +40,11 @@ export async function POST(req: NextRequest) {
       eventType: "EMAIL_VERIFIED",
       ipAddress: ip,
     });
+
+    // Asynchronously dispatch real-time webhook event
+    dispatchWebhookEvent("user.verified", {
+      userId: result.userId,
+    }).catch(() => {});
 
     return NextResponse.json({
       message: "Email address verified successfully. Your Avyantrix ID is now active.",

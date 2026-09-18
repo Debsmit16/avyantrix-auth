@@ -7,6 +7,8 @@ import { createEmailVerificationToken } from "@/lib/auth/tokens";
 import { sendVerificationEmail } from "@/lib/mail/mailer";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { logSecurityEvent } from "@/lib/auth/audit";
+import { validateUsername } from "@/lib/auth/reserved-usernames";
+import { dispatchWebhookEvent } from "@/lib/webhooks/dispatcher";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -48,6 +50,12 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, username, firstName, lastName, password, intendedRole } = parseResult.data;
+
+    // Validate username against reserved system list
+    const usernameValidation = validateUsername(username);
+    if (!usernameValidation.valid) {
+      return NextResponse.json({ error: usernameValidation.error }, { status: 400 });
+    }
 
     // Validate Argon2id password complexity
     const passwordCheck = validatePasswordStrength(password);
@@ -132,6 +140,16 @@ export async function POST(req: NextRequest) {
       ipAddress: ip,
       metadata: { action: "user_registered", email: normalizedEmail, intendedRole },
     });
+
+    // Asynchronously dispatch real-time webhook to ecosystem subscribers
+    dispatchWebhookEvent("user.created", {
+      userId: user.id,
+      email: normalizedEmail,
+      username: normalizedUsername,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      intendedRole,
+    }).catch(() => {});
 
     return NextResponse.json(
       {

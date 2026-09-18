@@ -4,6 +4,7 @@ import { Shield, CheckCircle2, MapPin, GraduationCap, Github, Linkedin, Globe, M
 import { formatDate } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { ProfileShareButtons } from "@/components/profile/ProfileShareButtons";
+import { getAvatarDataUrl } from "@/lib/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -155,18 +156,11 @@ export default async function PublicProfilePage({
           {/* Avatar & Basic Info */}
           <div className="-mt-12 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
             <div className="flex items-end gap-4">
-              {profile.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.firstName}
-                  className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-sm dark:border-zinc-900"
-                />
-              ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-zinc-950 text-2xl font-bold text-white shadow-sm dark:border-zinc-900 dark:bg-zinc-100 dark:text-zinc-950">
-                  {profile.firstName[0]}
-                  {profile.lastName[0] || ""}
-                </div>
-              )}
+              <img
+                src={profile.avatarUrl || getAvatarDataUrl(`${profile.firstName} ${profile.lastName}`, profile.username, 160)}
+                alt={profile.firstName}
+                className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-sm dark:border-zinc-900"
+              />
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
