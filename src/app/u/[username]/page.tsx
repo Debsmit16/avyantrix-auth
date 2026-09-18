@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Shield, CheckCircle2, MapPin, GraduationCap, Github, Linkedin, Globe, Mail, Award, Calendar } from "lucide-react";
+import { Shield, CheckCircle2, MapPin, GraduationCap, Github, Linkedin, Globe, Mail, Award, Calendar, Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 
@@ -111,10 +111,10 @@ export default async function PublicProfilePage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/90 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900/90 backdrop-blur-md">
         {/* Cover Header Banner */}
         <div className="h-32 bg-gradient-to-r from-zinc-900 via-zinc-800 to-red-950 p-6 flex items-start justify-between">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md border border-white/10">
             <Shield className="h-3.5 w-3.5 text-red-500" />
             <span>Avyantrix ID</span>
           </div>
@@ -132,10 +132,10 @@ export default async function PublicProfilePage({
                 <img
                   src={profile.avatarUrl}
                   alt={profile.firstName}
-                  className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-md dark:border-zinc-900"
+                  className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-sm dark:border-zinc-900"
                 />
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-zinc-950 text-2xl font-bold text-white shadow-md dark:border-zinc-900 dark:bg-zinc-100 dark:text-zinc-950">
+                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-zinc-950 text-2xl font-bold text-white shadow-sm dark:border-zinc-900 dark:bg-zinc-100 dark:text-zinc-950">
                   {profile.firstName[0]}
                   {profile.lastName[0] || ""}
                 </div>
@@ -164,15 +164,20 @@ export default async function PublicProfilePage({
                 return (
                   <span
                     key={role}
-                    className={`rounded-md border px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase ${
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase ${
                       role === "ADMIN"
-                        ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                        ? "border-red-500/30 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
                         : isRoleVerified
-                        ? "border-green-300 bg-green-50 text-green-700 dark:border-green-900/40 dark:bg-green-950/30 dark:text-green-300"
-                        : "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300"
+                        ? "border-emerald-500/30 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300"
+                        : "border-amber-500/30 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300"
                     }`}
                   >
-                    {role} {isRoleVerified ? "" : "(Unverified)"}
+                    {isRoleVerified ? (
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <Clock className="h-3 w-3 text-amber-500" />
+                    )}
+                    {role} {isRoleVerified ? "(Verified)" : "(Unverified)"}
                   </span>
                 );
               })}
@@ -187,14 +192,14 @@ export default async function PublicProfilePage({
               </p>
             )}
             {profile.bio && (
-              <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-400 whitespace-pre-line">
+              <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-400 whitespace-pre-line bg-zinc-50 dark:bg-zinc-800/40 p-3.5 rounded-xl border border-zinc-100 dark:border-zinc-800">
                 {profile.bio}
               </p>
             )}
           </div>
 
           {/* Metadata Chips */}
-          <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-zinc-500 border-t border-b border-zinc-100 dark:border-zinc-800 py-3">
+          <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-zinc-500 border-t border-b border-zinc-100 dark:border-zinc-800 py-3.5">
             {profile.location && (
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-zinc-400" />
@@ -233,7 +238,7 @@ export default async function PublicProfilePage({
                 {profile.verifiedBadges.map((b: any, idx: number) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50/60 px-3 py-1.5 text-xs font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300"
+                    className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50/60 px-3.5 py-1.5 text-xs font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5 text-red-500" />
                     <span>{b.badgeLabel}</span>
@@ -253,7 +258,7 @@ export default async function PublicProfilePage({
                 {profile.skills.map((s: any, idx: number) => (
                   <span
                     key={idx}
-                    className="rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+                    className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
                   >
                     {s.name}
                   </span>
@@ -270,7 +275,7 @@ export default async function PublicProfilePage({
                   href={profile.links.github}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                  className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 shadow-2xs transition-colors"
                 >
                   <Github className="h-3.5 w-3.5" /> GitHub Profile
                 </a>
@@ -280,7 +285,7 @@ export default async function PublicProfilePage({
                   href={profile.links.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                  className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 shadow-2xs transition-colors"
                 >
                   <Linkedin className="h-3.5 w-3.5 text-blue-600" /> LinkedIn
                 </a>
@@ -290,7 +295,7 @@ export default async function PublicProfilePage({
                   href={profile.links.portfolio}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                  className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 shadow-2xs transition-colors"
                 >
                   <Globe className="h-3.5 w-3.5" /> Portfolio
                 </a>

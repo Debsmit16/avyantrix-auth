@@ -106,34 +106,34 @@ function DashboardContent() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
       {/* Top Welcome Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+      <div className="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/90 p-6 shadow-xs dark:border-zinc-800/80 dark:bg-zinc-900/90 sm:p-8 backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="flex items-start sm:items-center gap-5">
             {profileData?.profile?.avatarUrl ? (
               <img
                 src={profileData.profile.avatarUrl}
                 alt={user.firstName}
-                className="h-16 w-16 rounded-full border-2 border-red-500 object-cover"
+                className="h-16 w-16 rounded-2xl border border-zinc-200 object-cover dark:border-zinc-700 shadow-xs"
               />
             ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-950 text-xl font-bold text-white dark:bg-zinc-100 dark:text-zinc-900">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-950 text-xl font-bold text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-xs">
                 {user.firstName[0]}
                 {user.lastName[0] || ""}
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
                   {user.firstName} {user.lastName}
                 </h1>
                 <span className="text-xs text-zinc-500 font-mono">(@{user.username})</span>
               </div>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {profileData?.profile?.headline || "Avyantrix ID Ecosystem Member"}
               </p>
               
               {/* Active Badges / Roles Bar */}
-              <div className="flex flex-wrap items-center gap-2 mt-2">
+              <div className="flex flex-wrap items-center gap-2 pt-1.5">
                 {user.roles.map((role) => {
                   const isRoleVerified = role === "ADMIN" || profileData?.badges?.some((b: any) => {
                     if (role === "BUILDER") return b.category === "CAPABILITY_BUILDER" && b.isActive;
@@ -145,14 +145,14 @@ function DashboardContent() {
                       key={role}
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
                         role === "ADMIN"
-                          ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                          ? "border-red-500/30 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
                           : isRoleVerified
-                          ? "border-green-400 bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300"
-                          : "border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                          ? "border-emerald-500/30 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                          : "border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
                       }`}
                     >
                       {isRoleVerified ? (
-                        <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
+                        <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                       ) : (
                         <Clock className="h-3 w-3 text-amber-500" />
                       )}
@@ -162,11 +162,11 @@ function DashboardContent() {
                 })}
 
                 {user.emailVerified ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-[11px] font-semibold text-green-700 dark:border-green-900/40 dark:bg-green-950/30 dark:text-green-400">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-400">
                     <CheckCircle2 className="h-3 w-3" /> Email Verified
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-400">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-400">
                     <AlertTriangle className="h-3 w-3" /> Unverified Email
                   </span>
                 )}
@@ -174,16 +174,16 @@ function DashboardContent() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <Link
               href={`/u/${user.username}`}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 shadow-2xs transition-colors"
             >
               Public Profile <ExternalLink className="h-3.5 w-3.5" />
             </Link>
             <Link
               href="/profile"
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-lg bg-zinc-950 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-xl bg-zinc-950 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 shadow-xs transition-colors"
             >
               Edit Profile
             </Link>
@@ -194,8 +194,8 @@ function DashboardContent() {
       {/* Enterprise Role Cockpit Switcher */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-            Enterprise Role Cockpits
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Enterprise Role Workspaces
           </h2>
           <span className="text-[11px] text-zinc-500">
             Switch active workspace context with 1-click
@@ -206,20 +206,20 @@ function DashboardContent() {
           {/* Builder Tab */}
           <button
             onClick={() => setActiveRoleView("BUILDER")}
-            className={`flex items-center gap-2.5 rounded-xl border p-3.5 text-left transition-all ${
+            className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-all ${
               activeRoleView === "BUILDER"
-                ? "border-red-500 bg-red-50/50 dark:border-red-500/80 dark:bg-red-950/30 shadow-sm"
-                : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
+                ? "border-red-500 bg-red-50/50 dark:border-red-500/80 dark:bg-red-950/30 shadow-xs"
+                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
             }`}
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400 shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400 shrink-0">
               <Code2 className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1">
-                Builder Cockpit
+              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                Builder
                 {hasBuilderBadge ? (
-                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                 ) : hasRole("BUILDER") ? (
                   <span className="inline-flex items-center text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1 rounded">
                     Pending
@@ -235,20 +235,20 @@ function DashboardContent() {
           {/* Mentor Tab */}
           <button
             onClick={() => setActiveRoleView("MENTOR")}
-            className={`flex items-center gap-2.5 rounded-xl border p-3.5 text-left transition-all ${
+            className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-all ${
               activeRoleView === "MENTOR"
-                ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/80 dark:bg-blue-950/30 shadow-sm"
-                : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
+                ? "border-blue-500 bg-blue-50/50 dark:border-blue-500/80 dark:bg-blue-950/30 shadow-xs"
+                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
             }`}
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 shrink-0">
               <GraduationCap className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1">
-                Mentor Hub
+              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                Mentor
                 {hasMentorBadge ? (
-                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                 ) : hasRole("MENTOR") ? (
                   <span className="inline-flex items-center text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1 rounded">
                     Pending
@@ -264,20 +264,20 @@ function DashboardContent() {
           {/* Problem Owner Tab */}
           <button
             onClick={() => setActiveRoleView("PROBLEM_OWNER")}
-            className={`flex items-center gap-2.5 rounded-xl border p-3.5 text-left transition-all ${
+            className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-all ${
               activeRoleView === "PROBLEM_OWNER"
-                ? "border-amber-500 bg-amber-50/50 dark:border-amber-500/80 dark:bg-amber-950/30 shadow-sm"
-                : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
+                ? "border-amber-500 bg-amber-50/50 dark:border-amber-500/80 dark:bg-amber-950/30 shadow-xs"
+                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
             }`}
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400 shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400 shrink-0">
               <Building2 className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1">
+              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
                 Problem Owner
                 {hasProblemOwnerBadge ? (
-                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                 ) : hasRole("PROBLEM_OWNER") ? (
                   <span className="inline-flex items-center text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1 rounded">
                     Pending
@@ -293,20 +293,20 @@ function DashboardContent() {
           {/* Challenge Organizer Tab */}
           <button
             onClick={() => setActiveRoleView("CHALLENGE_ORGANIZER")}
-            className={`flex items-center gap-2.5 rounded-xl border p-3.5 text-left transition-all ${
+            className={`flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-all ${
               activeRoleView === "CHALLENGE_ORGANIZER"
-                ? "border-purple-500 bg-purple-50/50 dark:border-purple-500/80 dark:bg-purple-950/30 shadow-sm"
-                : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
+                ? "border-purple-500 bg-purple-50/50 dark:border-purple-500/80 dark:bg-purple-950/30 shadow-xs"
+                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
             }`}
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400 shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400 shrink-0">
               <Trophy className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1">
-                Organizer Desk
+              <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                Organizer
                 {hasOrganizerBadge ? (
-                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                 ) : hasRole("CHALLENGE_ORGANIZER") ? (
                   <span className="inline-flex items-center text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1 rounded">
                     Pending
@@ -321,17 +321,17 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* If role is not verified, render Unverified / Unlock Banner CTA */}
+      {/* If role is not verified, render Unverified Banner CTA */}
       {!isVerifiedForCurrentView && (
         <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-6 dark:border-amber-800/60 dark:bg-amber-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-600" />
+              <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               {isRoleAssigned
                 ? `${activeRoleView.replace("_", " ")} Status: Unverified (Pending Approval)`
                 : `Unlock ${activeRoleView.replace("_", " ")} Workspace`}
             </h3>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-2xl">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed">
               {isRoleAssigned
                 ? `You have registered as a ${activeRoleView.replace("_", " ")}, but your verification credentials and proof are currently unverified. Submit full details for Super-Admin review to unlock all platform permissions and earn your verified badge.`
                 : `Submit an application to apply for ${activeRoleView.replace("_", " ")} verification credentials.`}
@@ -339,7 +339,7 @@ function DashboardContent() {
           </div>
           <Link
             href={`/verification?track=${activeRoleView === "BUILDER" ? "CAPABILITY_BUILDER" : activeRoleView}`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all shrink-0"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all shrink-0 shadow-2xs"
           >
             {isRoleAssigned ? "Submit / Update Verification Details" : `Apply for ${activeRoleView.replace("_", " ")} Track`}{" "}
             <ArrowRight className="h-3.5 w-3.5" />
@@ -354,12 +354,12 @@ function DashboardContent() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             {/* Connected Ecosystems */}
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Layers className="h-4 w-4 text-red-500" />
                 Connected Avyantrix Platforms
               </h2>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-zinc-500 mt-0.5">
                 Your Avyantrix ID grants seamless single sign-on across the builder ecosystem
               </p>
 
@@ -369,20 +369,20 @@ function DashboardContent() {
                   href="https://builds.avyantrix.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800 hover:border-red-400 dark:hover:border-red-500/50 transition-all group"
+                  className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800 hover:border-red-400 dark:hover:border-red-500/50 transition-all group"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
                       Venture Platform
                     </span>
-                    <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                       Active
                     </span>
                   </div>
                   <h3 className="text-sm font-bold text-zinc-900 dark:text-white mt-1 group-hover:text-red-500 transition-colors">
                     Avyantrix Builds
                   </h3>
-                  <p className="text-xs text-zinc-500 mt-1">
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
                     Collaborative venture engineering, hardware prototypes, and systems development.
                   </p>
                   <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/60 flex justify-between items-center text-xs font-semibold text-zinc-700 dark:text-zinc-300">
@@ -396,20 +396,20 @@ function DashboardContent() {
                   href="https://challenges.avyantrix.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800 hover:border-red-400 dark:hover:border-red-500/50 transition-all group"
+                  className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800 hover:border-red-400 dark:hover:border-red-500/50 transition-all group"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">
                       Hackathons & Sprints
                     </span>
-                    <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                       Active
                     </span>
                   </div>
                   <h3 className="text-sm font-bold text-zinc-900 dark:text-white mt-1 group-hover:text-red-500 transition-colors">
                     Avyantrix Challenges
                   </h3>
-                  <p className="text-xs text-zinc-500 mt-1">
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
                     Solve real-world industrial and clinical problems in deep-tech competitive sprints.
                   </p>
                   <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/60 flex justify-between items-center text-xs font-semibold text-zinc-700 dark:text-zinc-300">
@@ -421,7 +421,7 @@ function DashboardContent() {
             </div>
 
             {/* Verified Capabilities & Badges */}
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Award className="h-4 w-4 text-red-500" />
@@ -440,7 +440,7 @@ function DashboardContent() {
                   {profileData.badges.map((badge: any) => (
                     <div
                       key={badge.id}
-                      className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50/50 px-3 py-1.5 text-xs font-semibold text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300"
+                      className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50/50 px-3 py-1.5 text-xs font-semibold text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300"
                     >
                       <CheckCircle2 className="h-3.5 w-3.5 text-red-500" />
                       {badge.badgeLabel}
@@ -448,7 +448,7 @@ function DashboardContent() {
                   ))}
                 </div>
               ) : (
-                <div className="mt-4 rounded-lg border border-dashed border-zinc-300 p-4 text-center dark:border-zinc-700">
+                <div className="mt-4 rounded-xl border border-dashed border-zinc-300 p-6 text-center dark:border-zinc-700">
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     No verified capability badges issued yet. Submit project repositories or credentials to earn verified builder status.
                   </p>
@@ -469,7 +469,7 @@ function DashboardContent() {
                     profileData.skills.map((skill: any) => (
                       <span
                         key={skill.id}
-                        className="rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+                        className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
                       >
                         {skill.name}
                       </span>
@@ -484,7 +484,7 @@ function DashboardContent() {
 
           {/* Right Col: Quick Security & Actions */}
           <div className="space-y-6">
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <KeyRound className="h-4 w-4 text-red-500" />
                 Security & Identity
@@ -508,14 +508,14 @@ function DashboardContent() {
               <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                 <Link
                   href="/security"
-                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 py-2 px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200 py-2.5 px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
                 >
                   Manage Active Sessions & Security
                 </Link>
               </div>
             </div>
 
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/80 p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Avyantrix Identity Rule</h3>
               <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
                 Reputation at Avyantrix is grounded in verified work. Private verification evidence is never published; only earned badges and proof links appear on your public ID.
@@ -532,7 +532,7 @@ function DashboardContent() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             {/* Mentee & Review Queues */}
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -545,7 +545,7 @@ function DashboardContent() {
                 </div>
               </div>
 
-              <div className="mt-6 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
+              <div className="mt-6 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
                 <Inbox className="mx-auto h-8 w-8 text-zinc-400" />
                 <h4 className="text-xs font-bold text-zinc-900 dark:text-white mt-2">
                   No Pending Reviews
@@ -565,7 +565,7 @@ function DashboardContent() {
             </div>
 
             {/* Office Hours & Advisory Channels */}
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-blue-500" />
                 Office Hours & Advisory Settings
@@ -574,14 +574,14 @@ function DashboardContent() {
                 Configure your weekly advisory channel and connect external calendar booking
               </p>
 
-              <div className="mt-4 p-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="mt-4 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                   <div className="text-xs font-bold text-zinc-900 dark:text-white">External Calendar Sync</div>
                   <div className="text-[11px] text-zinc-500">Connect Google Calendar or Cal.com link on your public profile</div>
                 </div>
                 <Link
                   href="/profile"
-                  className="rounded-lg bg-zinc-950 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 transition-colors shrink-0"
+                  className="rounded-xl bg-zinc-950 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 transition-colors shrink-0 shadow-2xs"
                 >
                   Update Profile Links
                 </Link>
@@ -590,13 +590,13 @@ function DashboardContent() {
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Mentor Status</h3>
-              <div className="mt-3 space-y-2 text-xs">
+              <div className="mt-3 space-y-2.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Role Status</span>
                   {isVerifiedForCurrentView ? (
-                    <span className="font-semibold text-green-600 flex items-center gap-1">
+                    <span className="font-semibold text-emerald-600 flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5" /> Active (Verified Mentor)
                     </span>
                   ) : (
@@ -630,7 +630,7 @@ function DashboardContent() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             {/* Problem Statements Manager */}
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -646,13 +646,13 @@ function DashboardContent() {
                   href="https://builds.avyantrix.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shadow-sm"
+                  className="inline-flex items-center gap-1 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shadow-xs"
                 >
                   <Plus className="h-3.5 w-3.5" /> Post Problem Statement
                 </a>
               </div>
 
-              <div className="mt-6 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
+              <div className="mt-6 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
                 <FileCheck2 className="mx-auto h-8 w-8 text-zinc-400" />
                 <h4 className="text-xs font-bold text-zinc-900 dark:text-white mt-2">
                   No Active Problem Statements Published
@@ -665,13 +665,13 @@ function DashboardContent() {
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Enterprise Status</h3>
-              <div className="mt-3 space-y-2 text-xs">
+              <div className="mt-3 space-y-2.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Entity Status</span>
                   {isVerifiedForCurrentView ? (
-                    <span className="font-semibold text-green-600 flex items-center gap-1">
+                    <span className="font-semibold text-emerald-600 flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5" /> Verified Partner
                     </span>
                   ) : (
@@ -704,7 +704,7 @@ function DashboardContent() {
       {activeRoleView === "CHALLENGE_ORGANIZER" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
@@ -720,13 +720,13 @@ function DashboardContent() {
                   href="https://challenges.avyantrix.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 transition-colors shadow-sm"
+                  className="inline-flex items-center gap-1 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-purple-700 transition-colors shadow-xs"
                 >
                   <Plus className="h-3.5 w-3.5" /> Create New Sprint
                 </a>
               </div>
 
-              <div className="mt-6 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
+              <div className="mt-6 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 p-8 text-center">
                 <Trophy className="mx-auto h-8 w-8 text-zinc-400" />
                 <h4 className="text-xs font-bold text-zinc-900 dark:text-white mt-2">
                   No Hosted Sprints Yet
@@ -739,13 +739,13 @@ function DashboardContent() {
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Organizer Status</h3>
-              <div className="mt-3 space-y-2 text-xs">
+              <div className="mt-3 space-y-2.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Organizer Status</span>
                   {isVerifiedForCurrentView ? (
-                    <span className="font-semibold text-green-600 flex items-center gap-1">
+                    <span className="font-semibold text-emerald-600 flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5" /> Verified Host
                     </span>
                   ) : (

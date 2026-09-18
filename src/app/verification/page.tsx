@@ -254,34 +254,34 @@ function VerificationContent() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Role & Capability Verification Hub</h1>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Role & Capability Verification Hub</h1>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
           Prove your technical engineering proof, apply for mentor credentials, or verify your enterprise problem-owner and organizer status
         </p>
       </div>
 
       {success && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4 text-xs font-medium text-green-800 dark:border-green-900/40 dark:bg-green-950/30 dark:text-green-400">
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-400">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>{success}</span>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Earned Badges Section */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white mb-2 flex items-center gap-2">
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1.5 flex items-center gap-2">
           <Award className="h-4 w-4 text-red-500" />
           Active Verified Badges on Avyantrix ID
         </h2>
-        <p className="text-xs text-zinc-500 mb-4">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
           Badges earned through verified engineering proof and institutional review, displayed on your public profile
         </p>
 
@@ -290,7 +290,7 @@ function VerificationContent() {
             {badges.map((b) => (
               <div
                 key={b.id}
-                className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50/60 px-3.5 py-2 text-xs font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300"
+                className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50/60 px-3.5 py-2 text-xs font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300"
               >
                 <CheckCircle2 className="h-4 w-4 text-red-500" />
                 <span>{b.badgeLabel}</span>
@@ -306,8 +306,8 @@ function VerificationContent() {
       </div>
 
       {/* Verification Track Selector */}
-      <div className="space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+      <div className="space-y-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
           Choose Verification Track
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -315,10 +315,10 @@ function VerificationContent() {
           <button
             type="button"
             onClick={() => setActiveTrack("CAPABILITY_BUILDER")}
-            className={`p-4 rounded-xl border text-left transition-all ${
+            className={`p-4 rounded-2xl border text-left transition-all ${
               activeTrack === "CAPABILITY_BUILDER"
-                ? "border-red-500 bg-red-50/40 shadow-sm dark:border-red-500/80 dark:bg-red-950/30"
-                : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
+                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
             }`}
           >
             <div className="flex items-center justify-between mb-2">
@@ -337,14 +337,14 @@ function VerificationContent() {
           <button
             type="button"
             onClick={() => setActiveTrack("MENTOR")}
-            className={`p-4 rounded-xl border text-left transition-all ${
+            className={`p-4 rounded-2xl border text-left transition-all ${
               activeTrack === "MENTOR"
-                ? "border-red-500 bg-red-50/40 shadow-sm dark:border-red-500/80 dark:bg-red-950/30"
-                : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
+                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <GraduationCap className="h-5 w-5 text-red-500" />
+              <GraduationCap className="h-5 w-5 text-blue-500" />
               {activeTrack === "MENTOR" && (
                 <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
               )}
@@ -359,14 +359,14 @@ function VerificationContent() {
           <button
             type="button"
             onClick={() => setActiveTrack("PROBLEM_OWNER")}
-            className={`p-4 rounded-xl border text-left transition-all ${
+            className={`p-4 rounded-2xl border text-left transition-all ${
               activeTrack === "PROBLEM_OWNER"
-                ? "border-red-500 bg-red-50/40 shadow-sm dark:border-red-500/80 dark:bg-red-950/30"
-                : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
+                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <Building2 className="h-5 w-5 text-red-500" />
+              <Building2 className="h-5 w-5 text-amber-500" />
               {activeTrack === "PROBLEM_OWNER" && (
                 <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
               )}
@@ -381,14 +381,14 @@ function VerificationContent() {
           <button
             type="button"
             onClick={() => setActiveTrack("CHALLENGE_ORGANIZER")}
-            className={`p-4 rounded-xl border text-left transition-all ${
+            className={`p-4 rounded-2xl border text-left transition-all ${
               activeTrack === "CHALLENGE_ORGANIZER"
-                ? "border-red-500 bg-red-50/40 shadow-sm dark:border-red-500/80 dark:bg-red-950/30"
-                : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
+                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <Trophy className="h-5 w-5 text-red-500" />
+              <Trophy className="h-5 w-5 text-purple-500" />
               {activeTrack === "CHALLENGE_ORGANIZER" && (
                 <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
               )}
@@ -402,7 +402,7 @@ function VerificationContent() {
       </div>
 
       {/* Role-Specific Form Container */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 sm:p-8 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* TRACK 1: BUILDER CAPABILITY */}
           {activeTrack === "CAPABILITY_BUILDER" && (
@@ -426,7 +426,7 @@ function VerificationContent() {
                   value={builderNotes}
                   onChange={(e) => setBuilderNotes(e.target.value)}
                   placeholder="Summarize the systems architecture, firmware stack, or algorithms you've authored..."
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
 
@@ -448,7 +448,7 @@ function VerificationContent() {
                 {builderEvidence.map((item, idx) => (
                   <div
                     key={idx}
-                    className="rounded-lg border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50 space-y-3"
+                    className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50 space-y-3"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
@@ -473,7 +473,7 @@ function VerificationContent() {
                         <select
                           value={item.evidenceType}
                           onChange={(e) => updateBuilderEvidence(idx, "evidenceType", e.target.value)}
-                          className="mt-1 w-full rounded-md border border-zinc-200 bg-white py-1.5 px-2.5 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                          className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-1.5 px-2.5 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                         >
                           <option value="GITHUB_REPO">GitHub / GitLab Repository</option>
                           <option value="DEPLOYED_URL">Live Deployed URL / System Demo</option>
@@ -494,7 +494,7 @@ function VerificationContent() {
                           value={item.title}
                           onChange={(e) => updateBuilderEvidence(idx, "title", e.target.value)}
                           placeholder="e.g. TinyML Spirometry Firmware"
-                          className="mt-1 w-full rounded-md border border-zinc-200 bg-white py-1.5 px-2.5 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                          className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-1.5 px-2.5 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                         />
                       </div>
 
@@ -508,7 +508,7 @@ function VerificationContent() {
                           value={item.evidenceUrl}
                           onChange={(e) => updateBuilderEvidence(idx, "evidenceUrl", e.target.value)}
                           placeholder="https://github.com/organization/repository"
-                          className="mt-1 w-full rounded-md border border-zinc-200 bg-white py-1.5 px-2.5 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                          className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-1.5 px-2.5 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                         />
                       </div>
                     </div>
@@ -542,7 +542,7 @@ function VerificationContent() {
                     value={mentorData.affiliation}
                     onChange={(e) => setMentorData({ ...mentorData, affiliation: e.target.value })}
                     placeholder="e.g. Bosch Research / Stanford Med"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -556,7 +556,7 @@ function VerificationContent() {
                     value={mentorData.jobTitle}
                     onChange={(e) => setMentorData({ ...mentorData, jobTitle: e.target.value })}
                     placeholder="e.g. Senior Principal Embedded Engineer"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -571,7 +571,7 @@ function VerificationContent() {
                     required
                     value={mentorData.yearsExperience}
                     onChange={(e) => setMentorData({ ...mentorData, yearsExperience: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -585,7 +585,7 @@ function VerificationContent() {
                     value={mentorData.primaryDomains}
                     onChange={(e) => setMentorData({ ...mentorData, primaryDomains: e.target.value })}
                     placeholder="e.g. TinyML, Embedded C++, Medical Sensors, FPGA"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -600,7 +600,7 @@ function VerificationContent() {
                   value={mentorData.bio}
                   onChange={(e) => setMentorData({ ...mentorData, bio: e.target.value })}
                   placeholder="Describe your background, areas you want to guide builders in, and how you approach technical reviews..."
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
 
@@ -615,7 +615,7 @@ function VerificationContent() {
                     value={mentorData.linkedinUrl}
                     onChange={(e) => setMentorData({ ...mentorData, linkedinUrl: e.target.value })}
                     placeholder="https://linkedin.com/in/yourname"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -628,7 +628,7 @@ function VerificationContent() {
                     value={mentorData.scholarOrGithubUrl}
                     onChange={(e) => setMentorData({ ...mentorData, scholarOrGithubUrl: e.target.value })}
                     placeholder="https://scholar.google.com/citations?user=..."
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -659,7 +659,7 @@ function VerificationContent() {
                     value={problemOwnerData.organizationName}
                     onChange={(e) => setProblemOwnerData({ ...problemOwnerData, organizationName: e.target.value })}
                     placeholder="e.g. AeroSys Diagnostics Lab"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -673,7 +673,7 @@ function VerificationContent() {
                     value={problemOwnerData.industrySector}
                     onChange={(e) => setProblemOwnerData({ ...problemOwnerData, industrySector: e.target.value })}
                     placeholder="e.g. Medical Devices, Aerospace, Edge AI"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -687,7 +687,7 @@ function VerificationContent() {
                     value={problemOwnerData.websiteUrl}
                     onChange={(e) => setProblemOwnerData({ ...problemOwnerData, websiteUrl: e.target.value })}
                     placeholder="https://company.com"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -701,7 +701,7 @@ function VerificationContent() {
                     value={problemOwnerData.officialContactRole}
                     onChange={(e) => setProblemOwnerData({ ...problemOwnerData, officialContactRole: e.target.value })}
                     placeholder="e.g. Head of R&D / Lead Product Architect"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -716,7 +716,7 @@ function VerificationContent() {
                   value={problemOwnerData.problemScopeDescription}
                   onChange={(e) => setProblemOwnerData({ ...problemOwnerData, problemScopeDescription: e.target.value })}
                   placeholder="Outline the real-world engineering challenge, hardware bottlenecks, or clinical problem statements you plan to publish..."
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
 
@@ -729,7 +729,7 @@ function VerificationContent() {
                   value={problemOwnerData.proofUrl}
                   onChange={(e) => setProblemOwnerData({ ...problemOwnerData, proofUrl: e.target.value })}
                   placeholder="https://linkedin.com/company/organization"
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
             </div>
@@ -759,7 +759,7 @@ function VerificationContent() {
                     value={organizerData.communityName}
                     onChange={(e) => setOrganizerData({ ...organizerData, communityName: e.target.value })}
                     placeholder="e.g. IEEE Student Branch / AI Collective"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -770,7 +770,7 @@ function VerificationContent() {
                   <select
                     value={organizerData.entityType}
                     onChange={(e) => setOrganizerData({ ...organizerData, entityType: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   >
                     <option value="University Tech Club">University Tech Club / Chapter</option>
                     <option value="Developer Community">Developer Community / DAO</option>
@@ -790,7 +790,7 @@ function VerificationContent() {
                   value={organizerData.pastEventsTrackRecord}
                   onChange={(e) => setOrganizerData({ ...organizerData, pastEventsTrackRecord: e.target.value })}
                   placeholder="Details of previous hackathons organized, attendee counts, prize partners, and links..."
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
 
@@ -804,7 +804,7 @@ function VerificationContent() {
                   value={organizerData.proposedChallengeVision}
                   onChange={(e) => setOrganizerData({ ...organizerData, proposedChallengeVision: e.target.value })}
                   placeholder="Proposed theme, target engineering disciplines, anticipated timelines, and sponsor backing..."
-                  className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
 
@@ -819,7 +819,7 @@ function VerificationContent() {
                     value={organizerData.communityUrl}
                     onChange={(e) => setOrganizerData({ ...organizerData, communityUrl: e.target.value })}
                     placeholder="https://luma.com/event or https://community.org"
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -832,7 +832,7 @@ function VerificationContent() {
                     value={organizerData.proofDocumentUrl}
                     onChange={(e) => setOrganizerData({ ...organizerData, proofDocumentUrl: e.target.value })}
                     placeholder="https://drive.google.com/..."
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white py-2 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white py-2 px-3 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -846,14 +846,14 @@ function VerificationContent() {
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 rounded-lg bg-zinc-950 py-2.5 px-6 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all"
+              className="flex items-center gap-2 rounded-xl bg-zinc-950 py-2.5 px-6 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all shadow-xs"
             >
               {submitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Submitting Track Application...
+                  <Loader2 className="h-4 w-4 animate-spin" /> Submitting Application...
                 </>
               ) : (
-                "Submit Track Application"
+                "Submit Application"
               )}
             </button>
           </div>
@@ -861,9 +861,9 @@ function VerificationContent() {
       </div>
 
       {/* Historical Verification Requests */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white mb-4">
-          Submission History & Status ({requests.length})
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-4">
+          Submission History ({requests.length})
         </h2>
 
         {requests.length > 0 ? (
@@ -876,12 +876,12 @@ function VerificationContent() {
                       {req.category}
                     </span>
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
                         req.status === "VERIFIED"
-                          ? "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/40"
                           : req.status === "REJECTED"
-                          ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400"
-                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                          ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200/60 dark:border-red-900/40"
+                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-900/40"
                       }`}
                     >
                       {req.status === "VERIFIED" && <CheckCircle2 className="h-3 w-3" />}
@@ -894,7 +894,7 @@ function VerificationContent() {
                 </div>
 
                 {req.notes && (
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400 whitespace-pre-line bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 whitespace-pre-line bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800">
                     {req.notes}
                   </p>
                 )}
@@ -904,7 +904,7 @@ function VerificationContent() {
                     {req.evidence.map((ev: any) => (
                       <span
                         key={ev.id}
-                        className="inline-flex items-center gap-1 rounded border border-zinc-200 px-2 py-0.5 text-[10px] text-zinc-600 dark:border-zinc-800 dark:text-zinc-400"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1 text-[10px] text-zinc-600 dark:border-zinc-800 dark:text-zinc-400"
                       >
                         <FileCode className="h-3 w-3 text-red-500" />
                         {ev.title}
@@ -914,7 +914,7 @@ function VerificationContent() {
                 )}
 
                 {req.reviewNotes && (
-                  <div className="rounded-md border border-zinc-200 bg-zinc-50 p-2.5 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300">
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300">
                     <strong>Reviewer Feedback:</strong> {req.reviewNotes}
                   </div>
                 )}
