@@ -49,7 +49,7 @@ export default function SecurityPage() {
 
   // 2FA Setup State
   const [setupModalOpen, setSetupModalOpen] = useState(false);
-  const [setupData, setSetupData] = useState<{ secret: string; otpAuthUri: string; qrCodeSvg: string } | null>(null);
+  const [setupData, setSetupData] = useState<{ secret: string; otpAuthUri: string; qrCodeSvg?: string; qrCodeDataUrl?: string } | null>(null);
   const [setupCode, setSetupCode] = useState("");
   const [setupLoading, setSetupLoading] = useState(false);
   const [setupError, setSetupError] = useState("");
@@ -656,12 +656,20 @@ export default function SecurityPage() {
                 <p>Open Google Authenticator, Authy, or 1Password and scan the QR code below:</p>
               </div>
 
-              {/* QR Code SVG */}
-              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700">
-                <div
-                  className="rounded-lg bg-white p-2 shadow-inner"
-                  dangerouslySetInnerHTML={{ __html: setupData.qrCodeSvg }}
-                />
+              {/* QR Code */}
+              <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700">
+                {setupData.qrCodeDataUrl ? (
+                  <img
+                    src={setupData.qrCodeDataUrl}
+                    alt="Two-Factor Authentication QR Code"
+                    className="h-48 w-48 rounded-lg bg-white p-2 shadow-sm"
+                  />
+                ) : (
+                  <div
+                    className="rounded-lg bg-white p-2 shadow-inner"
+                    dangerouslySetInnerHTML={{ __html: setupData.qrCodeSvg || "" }}
+                  />
+                )}
               </div>
 
               {/* Manual Entry Key */}
