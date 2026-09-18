@@ -236,6 +236,93 @@ export async function sendVerificationApprovedEmail(
   }
 }
 
+export async function sendVerificationRejectedEmail(
+  to: string,
+  name: string,
+  category: string,
+  feedback: string
+): Promise<boolean> {
+  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com"}/verification?track=${category}`;
+
+  const categoryTitles: Record<string, string> = {
+    CAPABILITY_BUILDER: "Builder Capability Clearance",
+    MENTOR: "Mentor & Advisory Track",
+    PROBLEM_OWNER: "Enterprise Problem Owner Track",
+    CHALLENGE_ORGANIZER: "Challenge & Hackathon Organizer Track",
+    EDUCATION: "Academic & Research Clearance",
+    IDENTITY: "Identity Clearance",
+  };
+
+  const trackTitle = categoryTitles[category] || category.replace("_", " ");
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0A0A0B; color: #FFFFFF; margin: 0; padding: 40px 20px; }
+    .container { max-width: 560px; margin: 0 auto; background: #121214; border: 1px solid #27272A; border-radius: 12px; padding: 36px; }
+    .logo-container { display: flex; align-items: center; margin-bottom: 24px; }
+    .logo-img { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #27272A; background-color: #000000; vertical-align: middle; }
+    .logo-text { font-size: 18px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.5px; display: inline-block; vertical-align: middle; margin-left: 12px; }
+    .logo-text span { color: #EF4444; }
+    .feedback-card { background: #18181B; border: 1px solid #3F3F46; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 18px; margin: 24px 0; }
+    .feedback-title { font-size: 14px; font-weight: 700; color: #F59E0B; margin: 0 0 8px 0; }
+    .feedback-body { font-size: 13px; color: #E4E4E7; margin: 0; line-height: 1.6; white-space: pre-line; }
+    h1 { font-size: 22px; font-weight: 700; margin-top: 0; margin-bottom: 16px; color: #FFFFFF; }
+    p { font-size: 15px; line-height: 1.6; color: #A1A1AA; margin-bottom: 18px; }
+    .button { display: inline-block; background-color: #EF4444; color: #FFFFFF !important; padding: 12px 24px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px; }
+    .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 12px; color: #71717A; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo-container">
+      <img src="${LOGO_URL}" alt="Avyantrix" class="logo-img" />
+      <div class="logo-text">AVYANTRIX<span>.</span> AUTH</div>
+    </div>
+    <h1>Verification Update: Additional Proof Needed</h1>
+    <p>Hello ${name || "Operative"},</p>
+    <p>Thank you for submitting your verification request for <strong>${trackTitle}</strong>. Our technical review team has evaluated your submission and requested additional details or updated links before clearance can be granted.</p>
+    
+    <div class="feedback-card">
+      <div class="feedback-title">Reviewer Feedback:</div>
+      <div class="feedback-body">${feedback || "Please ensure your code repositories are public or provide accessible live demo and portfolio links."}</div>
+    </div>
+
+    <p>You can update your proof links, credentials, or portfolio directly in the Verification Hub and re-submit for expedited review.</p>
+
+    <div style="margin: 28px 0;">
+      <a href="${verificationUrl}" class="button" target="_blank">Update & Re-Submit Verification Proof</a>
+    </div>
+
+    <div class="footer">
+      <p style="margin: 0 0 8px 0; color: #71717A; font-size: 11px;">Please do not reply to this email. This address is automated and unmonitored. Direct replies cannot be received.</p>
+      &copy; ${new Date().getFullYear()} Avyantrix Engineering Collective. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  try {
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: getFromHeader(),
+      to,
+      replyTo: "noreply@avyantrix.com",
+      headers: NOREPLY_HEADERS,
+      subject: `Verification Status Update for ${trackTitle}`,
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send verification rejected email:", (error as Error).message);
+    return false;
+  }
+}
+
 export async function sendSecurityAlertEmail(
   to: string,
   name: string,

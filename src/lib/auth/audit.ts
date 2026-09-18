@@ -41,6 +41,9 @@ export interface LogSecurityParams {
     | "VERIFICATION_SUBMITTED"
     | "VERIFICATION_APPROVED"
     | "VERIFICATION_REJECTED"
+    | "2FA_ENABLED"
+    | "2FA_DISABLED"
+    | "2FA_CHALLENGE_PASSED"
     | "ACCOUNT_SUSPENDED"
     | "ACCOUNT_DELETED";
   ipAddress?: string;

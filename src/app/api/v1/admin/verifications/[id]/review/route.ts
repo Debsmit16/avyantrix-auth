@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/rbac";
 import { logSecurityEvent } from "@/lib/auth/audit";
-import { sendVerificationApprovedEmail } from "@/lib/mail/mailer";
+import { sendVerificationApprovedEmail, sendVerificationRejectedEmail } from "@/lib/mail/mailer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -136,15 +136,24 @@ export async function POST(
       }
     });
 
-    // Send successful email with Avyantrix logo upon verification approval
-    if (decision === "VERIFIED" && request.user?.email) {
+    // Send notification email with Avyantrix logo upon verification review
+    if (request.user?.email) {
       const recipientName = request.user.profile?.firstName || "Operative";
-      await sendVerificationApprovedEmail(
-        request.user.email,
-        recipientName,
-        request.category,
-        label
-      );
+      if (decision === "VERIFIED") {
+        await sendVerificationApprovedEmail(
+          request.user.email,
+          recipientName,
+          request.category,
+          label
+        );
+      } else if (decision === "REJECTED") {
+        await sendVerificationRejectedEmail(
+          request.user.email,
+          recipientName,
+          request.category,
+          reviewNotes || "Your submission required additional verification proof. Please review your links and re-submit."
+        );
+      }
     }
 
     await logSecurityEvent({

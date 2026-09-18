@@ -5,6 +5,7 @@ import { verifyPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { logLoginEvent } from "@/lib/auth/audit";
+import { sign2faToken } from "@/lib/auth/jwt";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -114,6 +115,17 @@ export async function POST(req: NextRequest) {
         { error: "Your account has been suspended. Please contact Avyantrix support." },
         { status: 403 }
       );
+    }
+
+    // If 2FA is enabled, issue a temporary challenge token instead of creating full session
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      const tempToken = sign2faToken(user.id);
+      return NextResponse.json({
+        requires2FA: true,
+        tempToken,
+        email: user.email,
+        message: "Two-factor authentication code required.",
+      });
     }
 
     // Create authoritative PostgreSQL session & set HttpOnly cookie

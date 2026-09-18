@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Shield, CheckCircle2, MapPin, GraduationCap, Github, Linkedin, Globe, Mail, Award, Calendar, Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
+import { ProfileShareButtons } from "@/components/profile/ProfileShareButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -92,9 +93,35 @@ export async function generateMetadata({
   if (!profile) {
     return { title: "Profile Not Found | Avyantrix Auth" };
   }
+
+  const title = `${profile.firstName} ${profile.lastName} (@${profile.username}) | Avyantrix ID`;
+  const description = profile.headline || `${profile.firstName}'s verified Avyantrix engineering credentials & capabilities.`;
+  const ogImageUrl = `https://auth.avyantrix.com/api/og/user/${profile.username}`;
+
   return {
-    title: `${profile.firstName} ${profile.lastName} (@${profile.username})`,
-    description: profile.headline || `${profile.firstName}'s verified Avyantrix Builder profile.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://auth.avyantrix.com/u/${profile.username}`,
+      siteName: "Avyantrix Identity",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${profile.firstName} ${profile.lastName} on Avyantrix`,
+        },
+      ],
+      type: "profile",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl],
+    },
   };
 }
 
@@ -302,6 +329,13 @@ export default async function PublicProfilePage({
               )}
             </div>
           )}
+
+          {/* Social Share & Markdown Badge Widget */}
+          <ProfileShareButtons
+            username={profile.username}
+            fullName={`${profile.firstName} ${profile.lastName}`}
+            headline={profile.headline}
+          />
         </div>
       </div>
     </div>

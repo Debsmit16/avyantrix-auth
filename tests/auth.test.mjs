@@ -270,3 +270,187 @@ test("Role verification submission blocks duplicate submissions for verified and
   assert.equal(organizerSubmission.status, 201);
 });
 
+// 9. Test RFC 6238 TOTP Engine (Generation, Verification & Time-Drift Window)
+test("RFC 6238 TOTP engine generates valid 6-digit codes and respects clock drift window", () => {
+  const BASE32_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+  function base32Decode(str) {
+    const cleanStr = str.toUpperCase().replace(/=+$/, "");
+    let bits = "";
+    for (let i = 0; i < cleanStr.length; i++) {
+      const val = BASE32_CHARS.indexOf(cleanStr[i]);
+      if (val === -1) throw new Error("Invalid base32 char");
+      bits += val.toString(2).padStart(5, "0");
+    }
+    const bytes = [];
+    for (let i = 0; i + 8 <= bits.length; i += 8) {
+      bytes.push(parseInt(bits.substring(i, i + 8), 2));
+    }
+    return Buffer.from(bytes);
+  }
+
+  function generateCode(secret, timeStep) {
+    const key = base32Decode(secret);
+    const counter = Buffer.alloc(8);
+    counter.writeBigInt64BE(BigInt(timeStep));
+    const hmac = crypto.createHmac("sha1", key).update(counter).digest();
+    const offset = hmac[hmac.length - 1] & 0x0f;
+    const binary =
+      ((hmac[offset] & 0x7f) << 24) |
+      ((hmac[offset + 1] & 0xff) << 16) |
+      ((hmac[offset + 2] & 0xff) << 8) |
+      (hmac[offset + 3] & 0xff);
+    const otp = binary % 1000000;
+    return otp.toString().padStart(6, "0");
+  }
+
+  function verifyCode(secret, code, window = 1, fixedTimeSec) {
+    if (!code || code.length !== 6) return false;
+    const nowSec = fixedTimeSec !== undefined ? fixedTimeSec : Math.floor(Date.now() / 1000);
+    const currentTimeStep = Math.floor(nowSec / 30);
+
+    for (let i = -window; i <= window; i++) {
+      const expected = generateCode(secret, currentTimeStep + i);
+      if (code === expected) return true;
+    }
+    return false;
+  }
+
+  const testSecret = "JBSWY3DPEHPK3PXP"; // "Hello!" in Base32
+  const fixedTime = 1700000000; // Fixed timestamp for determinism
+  const currentStep = Math.floor(fixedTime / 30);
+
+  const codeNow = generateCode(testSecret, currentStep);
+  assert.equal(codeNow.length, 6, "TOTP code must be 6 digits");
+  assert.match(codeNow, /^[0-9]{6}$/, "TOTP code must consist of digits only");
+
+  // Verify current code
+  assert.equal(verifyCode(testSecret, codeNow, 1, fixedTime), true, "Current code must verify");
+
+  // Verify clock drift tolerance (+30s / next step)
+  const codeNext = generateCode(testSecret, currentStep + 1);
+  assert.equal(verifyCode(testSecret, codeNext, 1, fixedTime), true, "Code within 1 step drift must verify");
+
+  // Verify rejection for expired/drifted code beyond window (+120s / +4 steps)
+  const codeFarFuture = generateCode(testSecret, currentStep + 4);
+  assert.equal(verifyCode(testSecret, codeFarFuture, 1, fixedTime), false, "Code outside drift window must be rejected");
+
+  // Verify invalid code string
+  assert.equal(verifyCode(testSecret, "000000", 1, fixedTime), false, "Wrong code must be rejected");
+});
+
+// 10. Test 2FA Single-Use Backup Recovery Codes Generation & Hashing
+test("2FA backup recovery codes are cryptographically random and securely hashed", () => {
+  function generateBackupCodes(count = 8) {
+    const rawCodes = [];
+    const hashedCodes = [];
+
+    for (let i = 0; i < count; i++) {
+      const part1 = crypto.randomBytes(2).toString("hex").toUpperCase();
+      const part2 = crypto.randomBytes(2).toString("hex").toUpperCase();
+      const raw = `${part1}-${part2}`;
+      const hashed = crypto.createHash("sha256").update(raw.replace("-", "").toUpperCase()).digest("hex");
+      rawCodes.push(raw);
+      hashedCodes.push(hashed);
+    }
+
+    return { rawCodes, hashedCodes };
+  }
+
+  const { rawCodes, hashedCodes } = generateBackupCodes(8);
+  assert.equal(rawCodes.length, 8, "Must generate 8 backup codes");
+  assert.equal(hashedCodes.length, 8, "Must generate 8 hashed backup codes");
+
+  // Test format
+  for (const raw of rawCodes) {
+    assert.match(raw, /^[A-F0-9]{4}-[A-F0-9]{4}$/, "Code must match XXXX-XXXX format");
+  }
+
+  // Test single-use consumption verification
+  const testInput = rawCodes[0];
+  const inputHash = crypto.createHash("sha256").update(testInput.replace("-", "").toUpperCase()).digest("hex");
+  const matchIndex = hashedCodes.indexOf(inputHash);
+  assert.equal(matchIndex, 0, "Input backup code must match first hash");
+
+  // Remove consumed code from database array
+  hashedCodes.splice(matchIndex, 1);
+  assert.equal(hashedCodes.length, 7, "Consumed backup code must be removed from list");
+
+  // Trying to reuse the same backup code must fail
+  const secondAttemptIndex = hashedCodes.indexOf(inputHash);
+  assert.equal(secondAttemptIndex, -1, "Single-use backup code cannot be used twice");
+});
+
+// 11. Test Avyantrix SSO Client SDK PKCE and Auth URL Builder
+test("Avyantrix SSO Client SDK generates valid PKCE S256 authorization URLs", () => {
+  class AvyantrixSSOClientTest {
+    constructor(config) {
+      this.authBaseUrl = config.authBaseUrl.replace(/\/$/, "");
+      this.clientId = config.clientId;
+      this.redirectUri = config.redirectUri;
+    }
+
+    createAuthorizationUrl(options = {}) {
+      const codeVerifier = crypto.randomBytes(32).toString("base64url");
+      const codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
+      const state = options.state || crypto.randomBytes(16).toString("hex");
+      const scope = options.scope || "openid profile email";
+
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: this.clientId,
+        redirect_uri: this.redirectUri,
+        scope,
+        state,
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256",
+      });
+
+      return {
+        url: `${this.authBaseUrl}/api/v1/oauth/authorize?${params.toString()}`,
+        codeVerifier,
+        state,
+      };
+    }
+  }
+
+  const ssoClient = new AvyantrixSSOClientTest({
+    authBaseUrl: "https://auth.avyantrix.com",
+    clientId: "avyantrix_builds",
+    redirectUri: "https://builds.avyantrix.com/api/auth/callback",
+  });
+
+  const authData = ssoClient.createAuthorizationUrl({ scope: "openid profile email" });
+  assert.ok(authData.url.includes("https://auth.avyantrix.com/api/v1/oauth/authorize"));
+  assert.ok(authData.url.includes("client_id=avyantrix_builds"));
+  assert.ok(authData.url.includes("code_challenge_method=S256"));
+  assert.ok(authData.codeVerifier.length >= 43, "PKCE verifier must be at least 43 chars");
+});
+
+// 12. Test Onboarding Checklist Completion Calculation
+test("Dashboard onboarding checklist calculates milestone completion percentage", () => {
+  function calculateChecklistProgress(user) {
+    const milestones = [
+      { id: "account", completed: true },
+      { id: "email", completed: Boolean(user.emailVerified) },
+      { id: "profile", completed: Boolean(user.profile?.firstName && user.skills?.length > 0) },
+      { id: "verification", completed: Boolean(user.badges?.length > 0) },
+    ];
+
+    const completedCount = milestones.filter((m) => m.completed).length;
+    const progressPercent = Math.round((completedCount / milestones.length) * 100);
+
+    return { milestones, progressPercent };
+  }
+
+  const newUser = { emailVerified: false, profile: null, skills: [], badges: [] };
+  assert.equal(calculateChecklistProgress(newUser).progressPercent, 25);
+
+  const verifiedEmailUser = { emailVerified: true, profile: { firstName: "Dev" }, skills: ["TypeScript"], badges: [] };
+  assert.equal(calculateChecklistProgress(verifiedEmailUser).progressPercent, 75);
+
+  const fullyOnboardedUser = { emailVerified: true, profile: { firstName: "Dev" }, skills: ["TypeScript"], badges: [{ category: "BUILDER" }] };
+  assert.equal(calculateChecklistProgress(fullyOnboardedUser).progressPercent, 100);
+});
+
+

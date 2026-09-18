@@ -144,3 +144,66 @@ export function verifyJwt<T = any>(token: string, expectedAudience?: string): T 
 
   return payload;
 }
+
+/**
+ * Sign a 5-minute temporary token during 2FA login challenge.
+ */
+export function sign2faToken(userId: string): string {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "HS256", typ: "2fa+jwt" };
+  const payload = {
+    sub: userId,
+    type: "2fa_challenge",
+    exp: now + 300, // 5 minutes
+    iat: now,
+  };
+
+  const encodedHeader = base64url(JSON.stringify(header));
+  const encodedPayload = base64url(JSON.stringify(payload));
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+
+  const signature = crypto
+    .createHmac("sha256", JWT_SECRET)
+    .update(signatureInput)
+    .digest();
+
+  return `${signatureInput}.${base64url(signature)}`;
+}
+
+/**
+ * Verify a 2FA temporary challenge token.
+ */
+export function verify2faToken(token: string): { sub: string } {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw new Error("Invalid token format.");
+  }
+
+  const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+
+  const expectedSignature = crypto
+    .createHmac("sha256", JWT_SECRET)
+    .update(signatureInput)
+    .digest();
+
+  if (base64url(expectedSignature) !== encodedSignature) {
+    throw new Error("Invalid token signature.");
+  }
+
+  const payload: { sub: string; type: string; exp: number } = JSON.parse(
+    base64urlDecode(encodedPayload)
+  );
+
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp < now) {
+    throw new Error("2FA challenge token has expired. Please try signing in again.");
+  }
+
+  if (payload.type !== "2fa_challenge") {
+    throw new Error("Invalid token type.");
+  }
+
+  return { sub: payload.sub };
+}
+

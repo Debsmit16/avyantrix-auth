@@ -78,6 +78,7 @@ export async function GET() {
         email: user.email,
         emailVerified: user.emailVerified,
         hasPassword: Boolean(user.passwordHash),
+        twoFactorEnabled: user.twoFactorEnabled,
         status: user.status,
         createdAt: user.createdAt,
         profile: user.profile,

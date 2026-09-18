@@ -31,6 +31,11 @@ import {
   ArrowUpRight,
   Inbox,
   FileCheck2,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Check,
+  Circle,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
@@ -43,6 +48,8 @@ function DashboardContent() {
 
   const [profileData, setProfileData] = useState<any>(null);
   const [fetching, setFetching] = useState(true);
+  const [checklistDismissed, setChecklistDismissed] = useState(false);
+  const [checklistCollapsed, setChecklistCollapsed] = useState(false);
 
   // Active Role Cockpit view (defaults to query param if valid, or dynamically determined from user roles)
   const roleParam = searchParams.get("role") as ActiveRoleView | null;
@@ -190,6 +197,201 @@ function DashboardContent() {
           </div>
         </div>
       </div>
+
+      {/* Onboarding Checklist Widget */}
+      {(() => {
+        const isStep1Done = true;
+        const isStep2Done = Boolean(user.emailVerified);
+        const isStep3Done = Boolean(profileData?.profile?.headline || profileData?.profile?.bio) && (profileData?.skills?.length || 0) > 0;
+        const isStep4Done = (profileData?.badges?.length || 0) > 0;
+
+        const completedStepsCount = [isStep1Done, isStep2Done, isStep3Done, isStep4Done].filter(Boolean).length;
+        const onboardingProgressPercent = (completedStepsCount / 4) * 100;
+        const isAllStepsCompleted = completedStepsCount === 4;
+
+        if (checklistDismissed) return null;
+
+        return (
+          <div className="rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden shadow-2xs">
+            <div className="p-5 sm:p-6 flex items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800/80">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Sparkles className="h-4 w-4 text-red-500" />
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                    Avyantrix ID Onboarding Progress
+                  </h3>
+                  <span className="rounded-full bg-red-500/10 px-2.5 py-0.5 text-[11px] font-bold text-red-600 dark:text-red-400 border border-red-500/20">
+                    {completedStepsCount} of 4 Complete ({Math.round(onboardingProgressPercent)}%)
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Complete these initial milestones to unlock full verified credentials and ecosystem privileges
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setChecklistCollapsed(!checklistCollapsed)}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors"
+                  title={checklistCollapsed ? "Expand" : "Collapse"}
+                >
+                  {checklistCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                </button>
+                {isAllStepsCompleted && (
+                  <button
+                    type="button"
+                    onClick={() => setChecklistDismissed(true)}
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors"
+                    title="Dismiss"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="h-1.5 w-full bg-zinc-100 dark:bg-zinc-800">
+              <div
+                className="h-full bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500 transition-all duration-500"
+                style={{ width: `${onboardingProgressPercent}%` }}
+              />
+            </div>
+
+            {!checklistCollapsed && (
+              <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {/* Step 1: Create Account */}
+                <div className="p-3.5 rounded-xl border border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-900/30 dark:bg-emerald-950/20 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      Step 1
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Done</span>
+                  </div>
+                  <div className="text-xs font-bold text-zinc-900 dark:text-white">Avyantrix ID Registered</div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Unique handle @{user.username} created.</p>
+                </div>
+
+                {/* Step 2: Verify Email */}
+                <div
+                  className={`p-3.5 rounded-xl border space-y-1.5 ${
+                    isStep2Done
+                      ? "border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-900/30 dark:bg-emerald-950/20"
+                      : "border-amber-200/80 bg-amber-50/40 dark:border-amber-900/30 dark:bg-amber-950/20"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                        isStep2Done ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"
+                      }`}
+                    >
+                      {isStep2Done ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Clock className="h-3.5 w-3.5 text-amber-500" />
+                      )}
+                      Step 2
+                    </span>
+                    {isStep2Done ? (
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Done</span>
+                    ) : (
+                      <Link
+                        href="/verify-email"
+                        className="text-[10px] font-bold text-amber-700 dark:text-amber-300 hover:underline"
+                      >
+                        Verify &rarr;
+                      </Link>
+                    )}
+                  </div>
+                  <div className="text-xs font-bold text-zinc-900 dark:text-white">Email Verification</div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {isStep2Done ? "Email is confirmed & secure." : "Confirm your email to enable security alerts."}
+                  </p>
+                </div>
+
+                {/* Step 3: Complete Profile */}
+                <div
+                  className={`p-3.5 rounded-xl border space-y-1.5 ${
+                    isStep3Done
+                      ? "border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-900/30 dark:bg-emerald-950/20"
+                      : "border-zinc-200/80 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                        isStep3Done ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-500"
+                      }`}
+                    >
+                      {isStep3Done ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Circle className="h-3.5 w-3.5 text-zinc-400" />
+                      )}
+                      Step 3
+                    </span>
+                    {isStep3Done ? (
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Done</span>
+                    ) : (
+                      <Link
+                        href="/profile"
+                        className="text-[10px] font-bold text-red-600 dark:text-red-400 hover:underline"
+                      >
+                        Complete &rarr;
+                      </Link>
+                    )}
+                  </div>
+                  <div className="text-xs font-bold text-zinc-900 dark:text-white">Profile & Skills</div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {isStep3Done ? "Bio & engineering skills configured." : "Add your headline, bio, and engineering stack."}
+                  </p>
+                </div>
+
+                {/* Step 4: Role Verification */}
+                <div
+                  className={`p-3.5 rounded-xl border space-y-1.5 ${
+                    isStep4Done
+                      ? "border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-900/30 dark:bg-emerald-950/20"
+                      : "border-zinc-200/80 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                        isStep4Done ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-500"
+                      }`}
+                    >
+                      {isStep4Done ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Circle className="h-3.5 w-3.5 text-zinc-400" />
+                      )}
+                      Step 4
+                    </span>
+                    {isStep4Done ? (
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Verified</span>
+                    ) : (
+                      <Link
+                        href="/verification"
+                        className="text-[10px] font-bold text-red-600 dark:text-red-400 hover:underline"
+                      >
+                        Submit &rarr;
+                      </Link>
+                    )}
+                  </div>
+                  <div className="text-xs font-bold text-zinc-900 dark:text-white">Role Verification Proof</div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {isStep4Done ? "Earned verified credentials." : "Submit code repos or portfolio to earn verified badge."}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Enterprise Role Cockpit Switcher */}
       <div className="space-y-3">
