@@ -53,7 +53,25 @@ export async function POST(req: NextRequest) {
 
     const { category, notes, evidence } = parseResult.data;
 
-    // Check if there is already a PENDING request for this category
+    // 1. Check if the user already has an ACTIVE verified badge for this category
+    const activeBadge = await prisma.verificationBadge.findFirst({
+      where: {
+        userId: session.userId,
+        category: category as VerificationCategory,
+        isActive: true,
+      },
+    });
+
+    if (activeBadge) {
+      return NextResponse.json(
+        {
+          error: `This role is already verified and assigned to your account.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 2. Check if there is already a PENDING request for this category
     const pendingRequest = await prisma.verificationRequest.findFirst({
       where: {
         userId: session.userId,
@@ -64,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     if (pendingRequest) {
       return NextResponse.json(
-        { error: `You already have a pending ${category} verification request under review.` },
+        { error: `You already have a pending verification request under review for this role.` },
         { status: 409 }
       );
     }

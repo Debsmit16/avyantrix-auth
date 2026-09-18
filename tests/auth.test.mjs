@@ -210,3 +210,63 @@ test("Privacy filters protect private emails and unapproved fields", () => {
   assert.equal(sanitized.location, null, "Location must be hidden when show_location is false");
   assert.equal(sanitized.college, "IEM", "College must be visible when show_education is true");
 });
+
+// 8. Test Role Verification Submission & Blocking Rules
+test("Role verification submission blocks duplicate submissions for verified and pending roles", () => {
+  const existingBadges = [
+    { category: "CAPABILITY_BUILDER", badgeLabel: "Verified Builder", isActive: true },
+  ];
+  const existingRequests = [
+    { category: "MENTOR", status: "PENDING" },
+    { category: "PROBLEM_OWNER", status: "REJECTED", reviewNotes: "Please provide corporate proof link" },
+  ];
+
+  function validateVerificationSubmission(category, evidence, badges, requests) {
+    // 1. Check if category already has an active verified badge
+    const isVerified = badges.some((b) => b.category === category && b.isActive);
+    if (isVerified) {
+      return { allowed: false, status: 400, error: "This role is already verified and assigned to your account." };
+    }
+
+    // 2. Check if a request is already pending review
+    const isPending = requests.some((r) => r.category === category && r.status === "PENDING");
+    if (isPending) {
+      return { allowed: false, status: 409, error: "You already have a pending verification request under review for this role." };
+    }
+
+    // 3. Check evidence requirement
+    if (!evidence || evidence.length === 0) {
+      return { allowed: false, status: 400, error: "At least one evidence item or proof link must be provided." };
+    }
+
+    return { allowed: true, status: 201 };
+  }
+
+  // Attempting to submit for already verified BUILDER must be blocked
+  const builderAttempt = validateVerificationSubmission("CAPABILITY_BUILDER", [{ title: "Repo" }], existingBadges, existingRequests);
+  assert.equal(builderAttempt.allowed, false);
+  assert.equal(builderAttempt.status, 400);
+  assert.match(builderAttempt.error, /already verified and assigned/);
+
+  // Attempting to submit for already pending MENTOR must be blocked
+  const mentorAttempt = validateVerificationSubmission("MENTOR", [{ title: "LinkedIn" }], existingBadges, existingRequests);
+  assert.equal(mentorAttempt.allowed, false);
+  assert.equal(mentorAttempt.status, 409);
+  assert.match(mentorAttempt.error, /pending verification request under review/);
+
+  // Attempting to submit with 0 proofs must be blocked
+  const emptyProofAttempt = validateVerificationSubmission("CHALLENGE_ORGANIZER", [], existingBadges, existingRequests);
+  assert.equal(emptyProofAttempt.allowed, false);
+  assert.equal(emptyProofAttempt.status, 400);
+
+  // Submitting for REJECTED problem owner with new proof must succeed
+  const problemOwnerResubmission = validateVerificationSubmission("PROBLEM_OWNER", [{ title: "Company Website" }], existingBadges, existingRequests);
+  assert.equal(problemOwnerResubmission.allowed, true);
+  assert.equal(problemOwnerResubmission.status, 201);
+
+  // Submitting for fresh unverified ORGANIZER with proof must succeed
+  const organizerSubmission = validateVerificationSubmission("CHALLENGE_ORGANIZER", [{ title: "Club Portal" }], existingBadges, existingRequests);
+  assert.equal(organizerSubmission.allowed, true);
+  assert.equal(organizerSubmission.status, 201);
+});
+

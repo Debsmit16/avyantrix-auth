@@ -1,11 +1,13 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
   CheckCircle2,
   Shield,
+  ShieldCheck,
   Clock,
   XCircle,
   Plus,
@@ -21,6 +23,7 @@ import {
   Building2,
   Trophy,
   ExternalLink,
+  ArrowRight,
   Linkedin,
   Briefcase,
   Layers,
@@ -115,6 +118,43 @@ function VerificationContent() {
     }
   }, [user, loading, router]);
 
+  // Track status helpers
+  const getBadgeForTrack = (track: TrackType) => {
+    return badges.find((b) => b.category === track && b.isActive);
+  };
+
+  const getPendingRequestForTrack = (track: TrackType) => {
+    return requests.find((r) => r.category === track && r.status === "PENDING");
+  };
+
+  const getLatestRequestForTrack = (track: TrackType) => {
+    return requests.find((r) => r.category === track);
+  };
+
+  const activeBadge = getBadgeForTrack(activeTrack);
+  const activePendingRequest = getPendingRequestForTrack(activeTrack);
+  const activeLatestRequest = getLatestRequestForTrack(activeTrack);
+
+  const isCurrentTrackVerified = Boolean(activeBadge);
+  const isCurrentTrackPending = !isCurrentTrackVerified && Boolean(activePendingRequest);
+  const isCurrentTrackRejected =
+    !isCurrentTrackVerified && !isCurrentTrackPending && activeLatestRequest?.status === "REJECTED";
+
+  const getRoleFromTrack = (track: TrackType) => {
+    switch (track) {
+      case "CAPABILITY_BUILDER":
+        return "BUILDER";
+      case "MENTOR":
+        return "MENTOR";
+      case "PROBLEM_OWNER":
+        return "PROBLEM_OWNER";
+      case "CHALLENGE_ORGANIZER":
+        return "CHALLENGE_ORGANIZER";
+      default:
+        return "BUILDER";
+    }
+  };
+
   // Builder Evidence Row Controls
   const addBuilderEvidenceRow = () => {
     setBuilderEvidence([
@@ -142,6 +182,14 @@ function VerificationContent() {
   // Submit Handler Dispatcher
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCurrentTrackVerified) {
+      setError("This role is already verified and assigned to your account.");
+      return;
+    }
+    if (isCurrentTrackPending) {
+      setError("A verification request for this role is already under review.");
+      return;
+    }
     setError("");
     setSuccess("");
     setSubmitting(true);
@@ -312,98 +360,292 @@ function VerificationContent() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Track 1: Builder */}
-          <button
-            type="button"
-            onClick={() => setActiveTrack("CAPABILITY_BUILDER")}
-            className={`p-4 rounded-2xl border text-left transition-all ${
-              activeTrack === "CAPABILITY_BUILDER"
-                ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
-                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <Code2 className="h-5 w-5 text-red-500" />
-              {activeTrack === "CAPABILITY_BUILDER" && (
-                <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
-              )}
-            </div>
-            <div className="text-sm font-bold text-zinc-900 dark:text-white">Builder Capability</div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Verify code repositories, live systems, TinyML, and hardware proofs.
-            </p>
-          </button>
+          {(() => {
+            const isTrackVerified = Boolean(getBadgeForTrack("CAPABILITY_BUILDER"));
+            const isTrackPending = !isTrackVerified && Boolean(getPendingRequestForTrack("CAPABILITY_BUILDER"));
+            return (
+              <button
+                type="button"
+                onClick={() => setActiveTrack("CAPABILITY_BUILDER")}
+                className={`p-4 rounded-2xl border text-left transition-all ${
+                  activeTrack === "CAPABILITY_BUILDER"
+                    ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
+                    : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <Code2 className="h-5 w-5 text-red-500" />
+                  {isTrackVerified ? (
+                    <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      Verified ✓
+                    </span>
+                  ) : isTrackPending ? (
+                    <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                      Under Review ⏳
+                    </span>
+                  ) : activeTrack === "CAPABILITY_BUILDER" ? (
+                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
+                  ) : null}
+                </div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-white">Builder Capability</div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Verify code repositories, live systems, TinyML, and hardware proofs.
+                </p>
+              </button>
+            );
+          })()}
 
           {/* Track 2: Mentor */}
-          <button
-            type="button"
-            onClick={() => setActiveTrack("MENTOR")}
-            className={`p-4 rounded-2xl border text-left transition-all ${
-              activeTrack === "MENTOR"
-                ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
-                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <GraduationCap className="h-5 w-5 text-blue-500" />
-              {activeTrack === "MENTOR" && (
-                <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
-              )}
-            </div>
-            <div className="text-sm font-bold text-zinc-900 dark:text-white">Mentor Application</div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Apply to guide builders, conduct technical reviews, and host office hours.
-            </p>
-          </button>
+          {(() => {
+            const isTrackVerified = Boolean(getBadgeForTrack("MENTOR"));
+            const isTrackPending = !isTrackVerified && Boolean(getPendingRequestForTrack("MENTOR"));
+            return (
+              <button
+                type="button"
+                onClick={() => setActiveTrack("MENTOR")}
+                className={`p-4 rounded-2xl border text-left transition-all ${
+                  activeTrack === "MENTOR"
+                    ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
+                    : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <GraduationCap className="h-5 w-5 text-blue-500" />
+                  {isTrackVerified ? (
+                    <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      Verified ✓
+                    </span>
+                  ) : isTrackPending ? (
+                    <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                      Under Review ⏳
+                    </span>
+                  ) : activeTrack === "MENTOR" ? (
+                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
+                  ) : null}
+                </div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-white">Mentor Application</div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Apply to guide builders, conduct technical reviews, and host office hours.
+                </p>
+              </button>
+            );
+          })()}
 
           {/* Track 3: Problem Owner */}
-          <button
-            type="button"
-            onClick={() => setActiveTrack("PROBLEM_OWNER")}
-            className={`p-4 rounded-2xl border text-left transition-all ${
-              activeTrack === "PROBLEM_OWNER"
-                ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
-                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <Building2 className="h-5 w-5 text-amber-500" />
-              {activeTrack === "PROBLEM_OWNER" && (
-                <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
-              )}
-            </div>
-            <div className="text-sm font-bold text-zinc-900 dark:text-white">Problem Owner</div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Verify company/lab credentials to publish industrial problems & bounties.
-            </p>
-          </button>
+          {(() => {
+            const isTrackVerified = Boolean(getBadgeForTrack("PROBLEM_OWNER"));
+            const isTrackPending = !isTrackVerified && Boolean(getPendingRequestForTrack("PROBLEM_OWNER"));
+            return (
+              <button
+                type="button"
+                onClick={() => setActiveTrack("PROBLEM_OWNER")}
+                className={`p-4 rounded-2xl border text-left transition-all ${
+                  activeTrack === "PROBLEM_OWNER"
+                    ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
+                    : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <Building2 className="h-5 w-5 text-amber-500" />
+                  {isTrackVerified ? (
+                    <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      Verified ✓
+                    </span>
+                  ) : isTrackPending ? (
+                    <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                      Under Review ⏳
+                    </span>
+                  ) : activeTrack === "PROBLEM_OWNER" ? (
+                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
+                  ) : null}
+                </div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-white">Problem Owner</div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Verify company/lab credentials to publish industrial problems & bounties.
+                </p>
+              </button>
+            );
+          })()}
 
           {/* Track 4: Organizer */}
-          <button
-            type="button"
-            onClick={() => setActiveTrack("CHALLENGE_ORGANIZER")}
-            className={`p-4 rounded-2xl border text-left transition-all ${
-              activeTrack === "CHALLENGE_ORGANIZER"
-                ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
-                : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <Trophy className="h-5 w-5 text-purple-500" />
-              {activeTrack === "CHALLENGE_ORGANIZER" && (
-                <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
-              )}
-            </div>
-            <div className="text-sm font-bold text-zinc-900 dark:text-white">Challenge Organizer</div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Host hackathons, campus sprints, and community competitions.
-            </p>
-          </button>
+          {(() => {
+            const isTrackVerified = Boolean(getBadgeForTrack("CHALLENGE_ORGANIZER"));
+            const isTrackPending = !isTrackVerified && Boolean(getPendingRequestForTrack("CHALLENGE_ORGANIZER"));
+            return (
+              <button
+                type="button"
+                onClick={() => setActiveTrack("CHALLENGE_ORGANIZER")}
+                className={`p-4 rounded-2xl border text-left transition-all ${
+                  activeTrack === "CHALLENGE_ORGANIZER"
+                    ? "border-red-500 bg-red-50/40 shadow-xs dark:border-red-500/80 dark:bg-red-950/30"
+                    : "border-zinc-200/80 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <Trophy className="h-5 w-5 text-purple-500" />
+                  {isTrackVerified ? (
+                    <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      Verified ✓
+                    </span>
+                  ) : isTrackPending ? (
+                    <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                      Under Review ⏳
+                    </span>
+                  ) : activeTrack === "CHALLENGE_ORGANIZER" ? (
+                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600">Selected</span>
+                  ) : null}
+                </div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-white">Challenge Organizer</div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Host hackathons, campus sprints, and community competitions.
+                </p>
+              </button>
+            );
+          })()}
         </div>
       </div>
 
       {/* Role-Specific Form Container */}
       <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 sm:p-8 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {isCurrentTrackVerified && activeBadge ? (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 dark:bg-emerald-950/20 dark:border-emerald-900/40">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 shrink-0">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                      {activeBadge.badgeLabel || "Verified Role"}
+                    </h3>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300/40 dark:border-emerald-700/40">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                      Role Verified & Assigned
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                    This role is already verified and assigned to your Avyantrix account.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Link
+                  href={`/dashboard?role=${getRoleFromTrack(activeTrack)}`}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-zinc-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-colors shadow-2xs w-full sm:w-auto"
+                >
+                  Open Role Cockpit <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                <Link
+                  href={`/u/${user?.username}`}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 transition-colors shadow-2xs w-full sm:w-auto"
+                >
+                  Public Profile <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/50 p-5 dark:border-zinc-800 dark:bg-zinc-900/50 space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                Verified Credential Details
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60">
+                  <span className="text-[11px] text-zinc-500 block mb-1">Official Designation</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                    <Award className="h-3.5 w-3.5 text-red-500" />
+                    {activeBadge.badgeLabel}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60">
+                  <span className="text-[11px] text-zinc-500 block mb-1">Verification Category</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    {activeTrack.replace("_", " ")}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60">
+                  <span className="text-[11px] text-zinc-500 block mb-1">Verified On</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    {formatDateTime(activeBadge.issuedAt)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 pt-1">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>
+                  No further verification submission is required for this role. Your verified status is active across all Avyantrix ecosystem products.
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : isCurrentTrackPending && activePendingRequest ? (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-amber-50/70 border border-amber-200/80 dark:bg-amber-950/20 dark:border-amber-900/40">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 shrink-0">
+                  <Clock className="h-6 w-6 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                      Verification Request Under Review
+                    </h3>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:text-amber-300 border border-amber-300/40 dark:border-amber-700/40">
+                      Pending Review
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                    Your verification request for {activeTrack.replace("_", " ")} is currently being evaluated by the Avyantrix review board.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/50 p-5 dark:border-zinc-800 dark:bg-zinc-900/50 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                Pending Submission Details
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60">
+                  <span className="text-[11px] text-zinc-500 block mb-1">Submission Date</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    {formatDateTime(activePendingRequest.createdAt)}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60">
+                  <span className="text-[11px] text-zinc-500 block mb-1">Attached Proofs</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    {activePendingRequest.evidence?.length || 0} proof artifacts attached
+                  </span>
+                </div>
+              </div>
+
+              {activePendingRequest.notes && (
+                <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 text-xs text-zinc-600 dark:text-zinc-400 whitespace-pre-line">
+                  <span className="text-[11px] text-zinc-500 font-semibold block mb-1">Submitted Notes:</span>
+                  {activePendingRequest.notes}
+                </div>
+              )}
+
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 pt-1">
+                You will receive an email confirmation once the Avyantrix admin team verifies your submission. New submissions for this track are locked while review is in progress.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {isCurrentTrackRejected && activeLatestRequest && (
+              <div className="rounded-xl border border-red-200 bg-red-50/70 p-4 text-xs text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300 space-y-1">
+                <div className="flex items-center gap-2 font-bold">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                  <span>Previous Submission Feedback (Action Required)</span>
+                </div>
+                <p className="text-red-700 dark:text-red-400 pl-6">
+                  {activeLatestRequest.reviewNotes || "Your previous submission required additional verification proof. Please update your details below and re-submit for review."}
+                </p>
+              </div>
+            )}
           {/* TRACK 1: BUILDER CAPABILITY */}
           {activeTrack === "CAPABILITY_BUILDER" && (
             <div className="space-y-6">
@@ -858,6 +1100,7 @@ function VerificationContent() {
             </button>
           </div>
         </form>
+        )}
       </div>
 
       {/* Historical Verification Requests */}
