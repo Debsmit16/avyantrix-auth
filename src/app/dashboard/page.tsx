@@ -87,13 +87,21 @@ function DashboardContent() {
 
   if (!user) return null;
 
-  const isVerifiedForCurrentView = hasRole(activeRoleView);
-
   // Get matching active badge for current role view if any
   const currentRoleBadge = profileData?.badges?.find((b: any) => {
     if (activeRoleView === "BUILDER") return b.category === "CAPABILITY_BUILDER";
     return b.category === activeRoleView;
   });
+
+  // User is verified for current view ONLY if they have an active badge or are Super-Admin
+  const isVerifiedForCurrentView = hasRole("ADMIN") || Boolean(currentRoleBadge?.isActive);
+  const isRoleAssigned = hasRole(activeRoleView);
+
+  // Status helpers for all 4 role tabs
+  const hasBuilderBadge = profileData?.badges?.some((b: any) => b.category === "CAPABILITY_BUILDER" && b.isActive);
+  const hasMentorBadge = profileData?.badges?.some((b: any) => b.category === "MENTOR" && b.isActive);
+  const hasProblemOwnerBadge = profileData?.badges?.some((b: any) => b.category === "PROBLEM_OWNER" && b.isActive);
+  const hasOrganizerBadge = profileData?.badges?.some((b: any) => b.category === "CHALLENGE_ORGANIZER" && b.isActive);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
@@ -126,25 +134,32 @@ function DashboardContent() {
               
               {/* Active Badges / Roles Bar */}
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                {user.roles.map((role) => (
-                  <span
-                    key={role}
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
-                      role === "ADMIN"
-                        ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
-                        : role === "MENTOR"
-                        ? "border-blue-400 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                        : role === "PROBLEM_OWNER"
-                        ? "border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                        : role === "CHALLENGE_ORGANIZER"
-                        ? "border-purple-400 bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300"
-                        : "border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
-                    }`}
-                  >
-                    <Shield className="h-3 w-3" />
-                    {role}
-                  </span>
-                ))}
+                {user.roles.map((role) => {
+                  const isRoleVerified = role === "ADMIN" || profileData?.badges?.some((b: any) => {
+                    if (role === "BUILDER") return b.category === "CAPABILITY_BUILDER" && b.isActive;
+                    return b.category === role && b.isActive;
+                  });
+
+                  return (
+                    <span
+                      key={role}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
+                        role === "ADMIN"
+                          ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                          : isRoleVerified
+                          ? "border-green-400 bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300"
+                          : "border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                      }`}
+                    >
+                      {isRoleVerified ? (
+                        <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <Clock className="h-3 w-3 text-amber-500" />
+                      )}
+                      {role} {isRoleVerified ? "(Verified)" : "(Unverified)"}
+                    </span>
+                  );
+                })}
 
                 {user.emailVerified ? (
                   <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-[11px] font-semibold text-green-700 dark:border-green-900/40 dark:bg-green-950/30 dark:text-green-400">
@@ -203,7 +218,15 @@ function DashboardContent() {
             <div>
               <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1">
                 Builder Cockpit
-                {hasRole("BUILDER") && <CheckCircle2 className="h-3 w-3 text-green-600" />}
+                {hasBuilderBadge ? (
+                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                ) : hasRole("BUILDER") ? (
+                  <span className="inline-flex items-center text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1 rounded">
+                    Pending
+                  </span>
+                ) : (
+                  <Lock className="h-3 w-3 text-zinc-400" />
+                )}
               </div>
               <div className="text-[10px] text-zinc-500">Projects & Proofs</div>
             </div>
@@ -224,8 +247,12 @@ function DashboardContent() {
             <div>
               <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1">
                 Mentor Hub
-                {hasRole("MENTOR") ? (
+                {hasMentorBadge ? (
                   <CheckCircle2 className="h-3 w-3 text-green-600" />
+                ) : hasRole("MENTOR") ? (
+                  <span className="inline-flex items-center text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1 rounded">
+                    Pending
+                  </span>
                 ) : (
                   <Lock className="h-3 w-3 text-zinc-400" />
                 )}
@@ -249,8 +276,12 @@ function DashboardContent() {
             <div>
               <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1">
                 Problem Owner
-                {hasRole("PROBLEM_OWNER") ? (
+                {hasProblemOwnerBadge ? (
                   <CheckCircle2 className="h-3 w-3 text-green-600" />
+                ) : hasRole("PROBLEM_OWNER") ? (
+                  <span className="inline-flex items-center text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1 rounded">
+                    Pending
+                  </span>
                 ) : (
                   <Lock className="h-3 w-3 text-zinc-400" />
                 )}
@@ -274,8 +305,12 @@ function DashboardContent() {
             <div>
               <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1">
                 Organizer Desk
-                {hasRole("CHALLENGE_ORGANIZER") ? (
+                {hasOrganizerBadge ? (
                   <CheckCircle2 className="h-3 w-3 text-green-600" />
+                ) : hasRole("CHALLENGE_ORGANIZER") ? (
+                  <span className="inline-flex items-center text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1 rounded">
+                    Pending
+                  </span>
                 ) : (
                   <Lock className="h-3 w-3 text-zinc-400" />
                 )}
@@ -286,31 +321,28 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* If role is not verified, render Unlocked Banner CTA */}
+      {/* If role is not verified, render Unverified / Unlock Banner CTA */}
       {!isVerifiedForCurrentView && (
-        <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50/70 p-6 dark:border-zinc-700 dark:bg-zinc-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-6 dark:border-amber-800/60 dark:bg-amber-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <Lock className="h-4 w-4 text-amber-500" />
-              {activeRoleView === "MENTOR"
-                ? "Unlock the Avyantrix Mentor Hub"
-                : activeRoleView === "PROBLEM_OWNER"
-                ? "Unlock the Enterprise Problem Owner Portal"
-                : "Unlock the Challenge Organizer Desk"}
+              <Clock className="h-4 w-4 text-amber-600" />
+              {isRoleAssigned
+                ? `${activeRoleView.replace("_", " ")} Status: Unverified (Pending Approval)`
+                : `Unlock ${activeRoleView.replace("_", " ")} Workspace`}
             </h3>
-            <p className="text-xs text-zinc-500 max-w-2xl">
-              {activeRoleView === "MENTOR"
-                ? "Submit your research, advisory, or industry credentials. Once verified by Super-Admins, you can review solutions, advise builder teams, and host technical office hours."
-                : activeRoleView === "PROBLEM_OWNER"
-                ? "Verify your corporate or institutional entity to publish industrial bottlenecks, fund bounties, and receive verified builder prototype submissions."
-                : "Verify your tech club or community track record to host verified hackathons and competitive sprints with Avyantrix scoring rubrics."}
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-2xl">
+              {isRoleAssigned
+                ? `You have registered as a ${activeRoleView.replace("_", " ")}, but your verification credentials and proof are currently unverified. Submit full details for Super-Admin review to unlock all platform permissions and earn your verified badge.`
+                : `Submit an application to apply for ${activeRoleView.replace("_", " ")} verification credentials.`}
             </p>
           </div>
           <Link
             href={`/verification?track=${activeRoleView === "BUILDER" ? "CAPABILITY_BUILDER" : activeRoleView}`}
             className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all shrink-0"
           >
-            Complete {activeRoleView.replace("_", " ")} Verification <ArrowRight className="h-3.5 w-3.5" />
+            {isRoleAssigned ? "Submit / Update Verification Details" : `Apply for ${activeRoleView.replace("_", " ")} Track`}{" "}
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       )}
@@ -563,19 +595,27 @@ function DashboardContent() {
               <div className="mt-3 space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Role Status</span>
-                  <span className="font-semibold text-green-600 flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Active Mentor
-                  </span>
+                  {isVerifiedForCurrentView ? (
+                    <span className="font-semibold text-green-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Active (Verified Mentor)
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-amber-600 flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" /> Unverified (Pending Review)
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Verified Badge</span>
                   <span className="font-semibold text-zinc-900 dark:text-white">
-                    {currentRoleBadge?.badgeLabel || "Verified Mentor"}
+                    {currentRoleBadge?.badgeLabel || "None (Awaiting Approval)"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Permissions</span>
-                  <span className="font-mono text-zinc-600 dark:text-zinc-400 text-[10px]">mentor.access, review</span>
+                  <span className="font-mono text-zinc-600 dark:text-zinc-400 text-[10px]">
+                    {isVerifiedForCurrentView ? "mentor.access, review" : "restricted.pending_verification"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -630,19 +670,27 @@ function DashboardContent() {
               <div className="mt-3 space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Entity Status</span>
-                  <span className="font-semibold text-green-600 flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Verified Partner
-                  </span>
+                  {isVerifiedForCurrentView ? (
+                    <span className="font-semibold text-green-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Verified Partner
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-amber-600 flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" /> Unverified (Pending Review)
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Verified Badge</span>
                   <span className="font-semibold text-zinc-900 dark:text-white">
-                    {currentRoleBadge?.badgeLabel || "Verified Problem Owner"}
+                    {currentRoleBadge?.badgeLabel || "None (Awaiting Approval)"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Permissions</span>
-                  <span className="font-mono text-zinc-600 dark:text-zinc-400 text-[10px]">problem.create</span>
+                  <span className="font-mono text-zinc-600 dark:text-zinc-400 text-[10px]">
+                    {isVerifiedForCurrentView ? "problem.create" : "restricted.pending_verification"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -696,19 +744,27 @@ function DashboardContent() {
               <div className="mt-3 space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Organizer Status</span>
-                  <span className="font-semibold text-green-600 flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Verified Host
-                  </span>
+                  {isVerifiedForCurrentView ? (
+                    <span className="font-semibold text-green-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Verified Host
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-amber-600 flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" /> Unverified (Pending Review)
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Verified Badge</span>
                   <span className="font-semibold text-zinc-900 dark:text-white">
-                    {currentRoleBadge?.badgeLabel || "Verified Organizer"}
+                    {currentRoleBadge?.badgeLabel || "None (Awaiting Approval)"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Permissions</span>
-                  <span className="font-mono text-zinc-600 dark:text-zinc-400 text-[10px]">challenge.create</span>
+                  <span className="font-mono text-zinc-600 dark:text-zinc-400 text-[10px]">
+                    {isVerifiedForCurrentView ? "challenge.create" : "restricted.pending_verification"}
+                  </span>
                 </div>
               </div>
             </div>

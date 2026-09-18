@@ -153,14 +153,29 @@ export default async function PublicProfilePage({
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              {profile.roles.map((role: string) => (
-                <span
-                  key={role}
-                  className="rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
-                >
-                  {role}
-                </span>
-              ))}
+              {profile.roles.map((role: string) => {
+                const isRoleVerified =
+                  role === "ADMIN" ||
+                  profile.verifiedBadges?.some((b: any) => {
+                    if (role === "BUILDER") return b.category === "CAPABILITY_BUILDER";
+                    return b.category === role;
+                  });
+
+                return (
+                  <span
+                    key={role}
+                    className={`rounded-md border px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase ${
+                      role === "ADMIN"
+                        ? "border-red-500 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                        : isRoleVerified
+                        ? "border-green-300 bg-green-50 text-green-700 dark:border-green-900/40 dark:bg-green-950/30 dark:text-green-300"
+                        : "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300"
+                    }`}
+                  >
+                    {role} {isRoleVerified ? "" : "(Unverified)"}
+                  </span>
+                );
+              })}
             </div>
           </div>
 

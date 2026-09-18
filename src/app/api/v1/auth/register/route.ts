@@ -84,13 +84,12 @@ export async function POST(req: NextRequest) {
     // Hash password strictly with Argon2id
     const passwordHash = await hashPassword(password);
 
-    // Get default BUILDER role and intended persona role
-    const [builderRole, intendedRoleRecord] = await Promise.all([
-      prisma.role.findUnique({ where: { name: "BUILDER" } }),
-      intendedRole !== "BUILDER" ? prisma.role.findUnique({ where: { name: intendedRole } }) : null,
-    ]);
+    // Get selected persona role
+    const targetRole = await prisma.role.findUnique({
+      where: { name: intendedRole },
+    });
 
-    // Create user, profile, roles, and initial verification request in a transaction
+    // Create user, profile, selected role, and initial pending verification request in a transaction
     const user = await prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
         data: {
@@ -110,35 +109,25 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Always grant baseline BUILDER ecosystem access
-      if (builderRole) {
+      // Assign ONLY the selected persona role
+      if (targetRole) {
         await tx.userRole.create({
           data: {
             userId: newUser.id,
-            roleId: builderRole.id,
-          },
-        });
-      }
-
-      // Grant intended persona role if different from BUILDER
-      if (intendedRoleRecord && intendedRoleRecord.id !== builderRole?.id) {
-        await tx.userRole.create({
-          data: {
-            userId: newUser.id,
-            roleId: intendedRoleRecord.id,
+            roleId: targetRole.id,
           },
         });
       }
 
       // If user registered with a specific track (Mentor, Problem Owner, Organizer),
-      // create initial queue entry in verification lineup
+      // create initial queue entry in verification lineup with PENDING status
       if (intendedRole !== "BUILDER") {
         await tx.verificationRequest.create({
           data: {
             userId: newUser.id,
             category: intendedRole as VerificationCategory,
             status: "PENDING",
-            notes: `[AUTO-INTENT] User registered with primary persona intent: ${intendedRole}. Awaiting verification evidence submission or fast-track administrative approval.`,
+            notes: `[AUTO-INTENT] User registered with primary persona: ${intendedRole}. Status: Unverified (Awaiting verification details & admin review).`,
           },
         });
       }
