@@ -20,14 +20,10 @@ import {
   ExternalLink,
   Mail,
   Shield,
-  Award,
-  Calendar,
-  Sparkles,
   Check,
 } from "lucide-react";
 import { ProfileShareButtons } from "@/components/profile/ProfileShareButtons";
 import { getAvatarDataUrl } from "@/lib/avatar";
-import { formatDate } from "@/lib/utils";
 
 export default function ProfilePage() {
   const { user, loading, refreshSession } = useAuth();
@@ -192,9 +188,9 @@ export default function ProfilePage() {
       )}
 
       {/* Main Profile Header Container */}
-      <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/90 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90 backdrop-blur-md mb-8">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 mb-8">
         {/* Banner */}
-        <div className="h-36 bg-gradient-to-r from-zinc-950 via-zinc-900 to-red-950 p-6 flex items-start justify-between relative">
+        <div className="h-32 sm:h-36 bg-gradient-to-r from-zinc-950 via-zinc-900 to-red-950 p-6 flex items-start justify-between relative">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md border border-white/10">
             <Shield className="h-3.5 w-3.5 text-red-500" />
             <span>Avyantrix Central ID</span>
@@ -206,40 +202,39 @@ export default function ProfilePage() {
 
         {/* Profile Identity Bar */}
         <div className="px-6 pb-6 pt-0">
-          <div className="-mt-12 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-            <div className="flex items-end gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            {/* Avatar & Name */}
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12 sm:-mt-14">
               <img
                 src={avatarSrc}
                 alt={fullName}
-                className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-md dark:border-zinc-900 bg-black"
+                className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl border-4 border-white object-cover shadow-lg dark:border-zinc-900 bg-zinc-900 shrink-0"
               />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-                    {fullName}
-                  </h1>
-                </div>
-                <p className="text-xs font-mono text-red-600 dark:text-red-400 font-semibold">
+              <div className="sm:pb-1">
+                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                  {fullName}
+                </h1>
+                <p className="text-xs font-mono text-red-600 dark:text-red-400 font-semibold mt-0.5">
                   @{username}
                 </p>
               </div>
             </div>
 
             {/* Action Buttons: Edit / View Public */}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 pt-2 sm:pt-0 sm:pb-1">
               {!isEditing ? (
                 <>
                   <Link
                     href={`/u/${username}`}
                     target="_blank"
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 shadow-2xs transition-all"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 shadow-2xs transition-all"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                     <span>Public Card</span>
                   </Link>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-red-700 shadow-md shadow-red-600/20 transition-all"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-red-700 shadow-md shadow-red-600/20 transition-all"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                     <span>Edit Profile</span>
