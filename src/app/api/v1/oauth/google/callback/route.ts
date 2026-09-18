@@ -6,6 +6,7 @@ import { createSession } from "@/lib/auth/session";
 import { logLoginEvent, logSecurityEvent } from "@/lib/auth/audit";
 import { isReservedUsername } from "@/lib/auth/reserved-usernames";
 import { dispatchWebhookEvent } from "@/lib/webhooks/dispatcher";
+import { sendWelcomeEmail } from "@/lib/mail/mailer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -169,6 +170,11 @@ export async function GET(req: NextRequest) {
           provider: "google",
           intendedRole: "BUILDER",
         }).catch(() => {});
+
+        // Send branded Welcome to Avyantrix onboarding email
+        sendWelcomeEmail(normalizedEmail, firstName, candidateUsername).catch((err) => {
+          console.error("Failed to dispatch welcome email for Google user:", err);
+        });
       }
     }
 

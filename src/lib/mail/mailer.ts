@@ -440,3 +440,100 @@ export async function sendMagicLinkEmail(to: string, name: string, token: string
   }
 }
 
+export async function sendWelcomeEmail(to: string, name: string, username?: string): Promise<boolean> {
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://auth.avyantrix.com"}/dashboard`;
+  const profileHandle = username ? `@${username}` : "Builder";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0A0A0B; color: #FFFFFF; margin: 0; padding: 40px 20px; }
+    .container { max-width: 560px; margin: 0 auto; background: #121214; border: 1px solid #27272A; border-radius: 12px; padding: 36px; }
+    .logo-container { display: flex; align-items: center; margin-bottom: 24px; }
+    .logo-img { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #27272A; background-color: #000000; vertical-align: middle; }
+    .logo-text { font-size: 18px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.5px; display: inline-block; vertical-align: middle; margin-left: 12px; }
+    .logo-text span { color: #EF4444; }
+    .welcome-badge { display: inline-block; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #F87171; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+    h1 { font-size: 24px; font-weight: 700; margin-top: 0; margin-bottom: 16px; color: #FFFFFF; letter-spacing: -0.5px; }
+    p { font-size: 15px; line-height: 1.6; color: #A1A1AA; margin-bottom: 20px; }
+    .features-card { background: #18181B; border: 1px solid #27272A; border-radius: 8px; padding: 20px; margin: 24px 0; }
+    .feature-item { display: flex; align-items: flex-start; margin-bottom: 14px; }
+    .feature-item:last-child { margin-bottom: 0; }
+    .feature-icon { color: #EF4444; font-weight: bold; margin-right: 12px; font-size: 16px; line-height: 1.4; }
+    .feature-title { font-size: 14px; font-weight: 600; color: #FFFFFF; margin-bottom: 2px; }
+    .feature-desc { font-size: 13px; color: #71717A; line-height: 1.4; }
+    .button { display: inline-block; background-color: #EF4444; color: #FFFFFF !important; padding: 13px 28px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 8px; margin: 8px 0 20px 0; }
+    .footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #27272A; font-size: 12px; color: #71717A; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo-container">
+      <img src="${LOGO_URL}" alt="Avyantrix" class="logo-img" />
+      <div class="logo-text">AVYANTRIX<span>.</span> AUTH</div>
+    </div>
+    <div class="welcome-badge">Central Identity Activated</div>
+    <h1>Welcome to the Avyantrix Ecosystem</h1>
+    <p>Hello ${name || "Builder"},</p>
+    <p>Your central Avyantrix ID (<strong>${profileHandle}</strong>) has been successfully activated. You now have single sign-on access to all Avyantrix products, hackathons, and builder tools.</p>
+    
+    <div class="features-card">
+      <div class="feature-item">
+        <div class="feature-icon">🛡️</div>
+        <div>
+          <div class="feature-title">Universal Developer Identity</div>
+          <div class="feature-desc">Use one master account for all current and future Avyantrix portals and partner platforms.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">⚡</div>
+        <div>
+          <div class="feature-title">Clearance Verification Hub</div>
+          <div class="feature-desc">Submit proof to earn verified clearances across Builder, Mentor, and Enterprise Problem Owner tracks.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🔒</div>
+        <div>
+          <div class="feature-title">Enterprise-Grade Security</div>
+          <div class="feature-desc">Protect your profile with two-factor authentication (TOTP) and active session management.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <a href="${dashboardUrl}" class="button" target="_blank">Launch Your Dashboard</a>
+    </div>
+
+    <p style="font-size: 13px; color: #71717A; margin-top: 12px;">Need assistance or have feedback? Reach out directly through the portal or join our developer community.</p>
+
+    <div class="footer">
+      <p style="margin: 0 0 8px 0; color: #71717A; font-size: 11px;">Please do not reply to this email. This address is automated and unmonitored. Direct replies cannot be received.</p>
+      &copy; ${new Date().getFullYear()} Avyantrix Engineering Collective. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  try {
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: getFromHeader(),
+      to,
+      replyTo: "noreply@avyantrix.com",
+      headers: NOREPLY_HEADERS,
+      subject: "Welcome to Avyantrix ID — Your Developer Identity is Ready",
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send welcome email:", (error as Error).message);
+    return false;
+  }
+}
+
+

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { prisma } from "@/lib/prisma";
 import { verifyEmailToken } from "@/lib/auth/tokens";
 import { logSecurityEvent } from "@/lib/auth/audit";
 import { dispatchWebhookEvent } from "@/lib/webhooks/dispatcher";
+import { sendWelcomeEmail } from "@/lib/mail/mailer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -45,6 +47,25 @@ export async function POST(req: NextRequest) {
     dispatchWebhookEvent("user.verified", {
       userId: result.userId,
     }).catch(() => {});
+
+    // Asynchronously send welcome email
+    prisma.user
+      .findUnique({
+        where: { id: result.userId },
+        include: { profile: true },
+      })
+      .then((user) => {
+        if (user) {
+          sendWelcomeEmail(
+            user.email,
+            user.profile?.firstName || "Builder",
+            user.profile?.username
+          ).catch((err) => {
+            console.error("Failed to send welcome email on email verification:", err);
+          });
+        }
+      })
+      .catch(() => {});
 
     return NextResponse.json({
       message: "Email address verified successfully. Your Avyantrix ID is now active.",
