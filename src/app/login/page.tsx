@@ -50,8 +50,12 @@ function LoginForm() {
       <div className="w-full max-w-md space-y-6 rounded-2xl border border-zinc-200/80 bg-white/90 p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90 backdrop-blur-md">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 shadow-xs">
-            <Shield className="h-5 w-5 text-red-500" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-black p-1 border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+            <img
+              src="/brand/avyantrix-logo.png"
+              alt="Avyantrix"
+              className="h-full w-full object-contain"
+            />
           </div>
           <h2 className="mt-3.5 text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
             Sign in to Avyantrix ID

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth/rbac";
 import { logSecurityEvent } from "@/lib/auth/audit";
+import { sendVerificationApprovedEmail } from "@/lib/mail/mailer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -36,12 +37,29 @@ export async function POST(
 
     const request = await prisma.verificationRequest.findUnique({
       where: { id: requestId },
-      include: { user: true },
+      include: {
+        user: {
+          include: {
+            profile: true,
+          },
+        },
+      },
     });
 
     if (!request) {
       return NextResponse.json({ error: "Verification request not found." }, { status: 404 });
     }
+
+    const defaultBadgeLabels: Record<string, string> = {
+      IDENTITY: "Identity Verified",
+      EDUCATION: "Education Verified",
+      CAPABILITY_BUILDER: "Verified Builder",
+      PROBLEM_OWNER: "Verified Problem Owner",
+      MENTOR: "Verified Mentor",
+      CHALLENGE_ORGANIZER: "Verified Organizer",
+    };
+
+    const label = badgeLabel || defaultBadgeLabels[request.category] || "Verified";
 
     // Atomic update of verification request & badge creation
     await prisma.$transaction(async (tx) => {
@@ -56,17 +74,6 @@ export async function POST(
       });
 
       if (decision === "VERIFIED") {
-        const defaultBadgeLabels: Record<string, string> = {
-          IDENTITY: "Identity Verified",
-          EDUCATION: "Education Verified",
-          CAPABILITY_BUILDER: "Verified Builder",
-          PROBLEM_OWNER: "Verified Problem Owner",
-          MENTOR: "Verified Mentor",
-          CHALLENGE_ORGANIZER: "Verified Organizer",
-        };
-
-        const label = badgeLabel || defaultBadgeLabels[request.category] || "Verified";
-
         await tx.verificationBadge.upsert({
           where: {
             userId_category: {
@@ -128,6 +135,17 @@ export async function POST(
         });
       }
     });
+
+    // Send successful email with Avyantrix logo upon verification approval
+    if (decision === "VERIFIED" && request.user?.email) {
+      const recipientName = request.user.profile?.firstName || "Operative";
+      await sendVerificationApprovedEmail(
+        request.user.email,
+        recipientName,
+        request.category,
+        label
+      );
+    }
 
     await logSecurityEvent({
       userId: reviewer.userId,

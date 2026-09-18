@@ -119,19 +119,6 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // If user registered with a specific track (Mentor, Problem Owner, Organizer),
-      // create initial queue entry in verification lineup with PENDING status
-      if (intendedRole !== "BUILDER") {
-        await tx.verificationRequest.create({
-          data: {
-            userId: newUser.id,
-            category: intendedRole as VerificationCategory,
-            status: "PENDING",
-            notes: `[AUTO-INTENT] User registered with primary persona: ${intendedRole}. Status: Unverified (Awaiting verification details & admin review).`,
-          },
-        });
-      }
-
       return newUser;
     });
 

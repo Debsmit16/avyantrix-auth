@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -41,11 +42,15 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200/80 bg-white/80 backdrop-blur-md dark:border-zinc-800/80 dark:bg-[#09090B]/80 transition-all">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand Logo */}
+        {/* Brand Logo with Official Avyantrix Emblem */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-bold text-sm shadow-sm transition-transform group-hover:scale-105">
-              A
+            <div className="relative h-9 w-9 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-black p-0.5 shadow-sm transition-transform group-hover:scale-105">
+              <img
+                src="/brand/avyantrix-logo.png"
+                alt="Avyantrix Logo"
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-white">
