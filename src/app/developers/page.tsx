@@ -17,16 +17,67 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
+  PlusCircle,
+  Settings,
+  Lock,
+  Cpu,
 } from "lucide-react";
 
 export default function DevelopersPage() {
   const [activeTab, setActiveTab] = useState<"challenges" | "builds" | "nextauth" | "curl">("challenges");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  // Interactive .env generator state
+  const [selectedApp, setSelectedApp] = useState<"builds" | "challenges" | "custom">("challenges");
+  const [environment, setEnvironment] = useState<"prod" | "local">("prod");
+  const [customClientId, setCustomClientId] = useState("my_custom_app");
+  const [customPort, setCustomPort] = useState("3001");
+
   const copyCode = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const getEnvConfig = () => {
+    if (selectedApp === "builds") {
+      const redirectUri =
+        environment === "prod"
+          ? "https://builds.avyantrix.com/api/auth/callback"
+          : "http://localhost:3001/api/auth/callback";
+      return `# Avyantrix Builds - Environment Variables (.env.local)
+NEXT_PUBLIC_AVYANTRIX_ISSUER="https://auth.avyantrix.com"
+AVYANTRIX_CLIENT_ID="avyantrix_builds"
+AVYANTRIX_CLIENT_SECRET="YOUR_CLIENT_SECRET_FROM_ADMIN_CONSOLE"
+NEXTAUTH_URL="${environment === "prod" ? "https://builds.avyantrix.com" : "http://localhost:3001"}"
+AVYANTRIX_REDIRECT_URI="${redirectUri}"
+AVYANTRIX_SCOPES="openid profile email roles clearances"`;
+    }
+
+    if (selectedApp === "challenges") {
+      const redirectUri =
+        environment === "prod"
+          ? "https://challenges.avyantrix.com/api/auth/callback"
+          : "http://localhost:3002/api/auth/callback";
+      return `# Avyantrix Challenges - Environment Variables (.env.local)
+NEXT_PUBLIC_AVYANTRIX_ISSUER="https://auth.avyantrix.com"
+AVYANTRIX_CLIENT_ID="avyantrix_challenges"
+AVYANTRIX_CLIENT_SECRET="YOUR_CLIENT_SECRET_FROM_ADMIN_CONSOLE"
+NEXTAUTH_URL="${environment === "prod" ? "https://challenges.avyantrix.com" : "http://localhost:3002"}"
+AVYANTRIX_REDIRECT_URI="${redirectUri}"
+AVYANTRIX_SCOPES="openid profile email roles clearances"`;
+    }
+
+    return `# Custom Ecosystem App - Environment Variables (.env.local)
+NEXT_PUBLIC_AVYANTRIX_ISSUER="https://auth.avyantrix.com"
+AVYANTRIX_CLIENT_ID="${customClientId}"
+AVYANTRIX_CLIENT_SECRET="YOUR_CLIENT_SECRET_FROM_ADMIN_CONSOLE"
+AVYANTRIX_REDIRECT_URI="${
+      environment === "prod"
+        ? `https://${customClientId}.avyantrix.com/api/auth/callback`
+        : `http://localhost:${customPort}/api/auth/callback`
+    }"
+AVYANTRIX_SCOPES="openid profile email roles clearances"`;
   };
 
   const challengesSnippet = `// 1. Avyantrix Challenges - 1-Click Fast Hackathon Application
@@ -38,7 +89,7 @@ export async function fetchApplicantPassport(accessToken: string) {
 
   const passport = await res.json();
 
-  // Instant pre-population without asking users to type anything:
+  // Instant pre-population without asking users to type repetitive forms:
   return {
     applicantId: passport.user.id,
     fullName: passport.user.full_name,
@@ -127,72 +178,215 @@ curl -X GET https://auth.avyantrix.com/api/v1/oauth/passport \\
   -H "Authorization: Bearer ACCESS_TOKEN"`;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 space-y-10">
       {/* Header */}
-      <div className="mb-10">
+      <div>
         <div className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-xs font-medium text-red-600 dark:text-red-400 mb-3">
           <BookOpen className="h-3.5 w-3.5" />
-          <span>Avyantrix Identity Platform • Ecosystem Integration Docs</span>
+          <span>Avyantrix Identity Platform • Developer & Ecosystem Hub</span>
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
-          Ecosystem Single Sign-On (SSO) & Passport API
+          Ecosystem Single Sign-On (SSO) & Application Integration
         </h1>
         <p className="mt-2 text-sm text-zinc-500 max-w-3xl">
-          Technical specifications for engineers connecting <strong className="text-zinc-700 dark:text-zinc-300">Avyantrix Builds</strong>, <strong className="text-zinc-700 dark:text-zinc-300">Avyantrix Challenges</strong>, and future Avyantrix platforms to central identity.
+          Complete integration guide and credential manager for connecting <strong className="text-zinc-700 dark:text-zinc-300">Avyantrix Builds</strong>, <strong className="text-zinc-700 dark:text-zinc-300">Avyantrix Challenges</strong>, and future platforms to central identity.
         </p>
       </div>
 
-      {/* Discovery Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-2xs">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-1.5">
-            <Globe className="h-4 w-4" />
-            OIDC Discovery
-          </div>
-          <p className="text-xs text-zinc-500 mb-3">
-            Standard RFC 8414 metadata for zero-config client setup.
-          </p>
-          <a
-            href="/.well-known/openid-configuration"
-            target="_blank"
-            className="inline-flex items-center gap-1 font-mono text-xs text-zinc-700 hover:text-red-600 dark:text-zinc-300 dark:hover:text-red-400 font-medium"
-          >
-            /.well-known/openid-configuration <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
+      {/* 3-Step Quickstart Architecture */}
+      <div className="rounded-3xl border border-zinc-200/80 bg-gradient-to-br from-white via-zinc-50 to-red-50/20 p-6 sm:p-8 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-900 dark:to-red-950/20 shadow-xs">
+        <h2 className="text-base font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
+          <Cpu className="h-5 w-5 text-red-500" />
+          How to Connect Any Avyantrix App in 3 Simple Steps
+        </h2>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-2xs">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-1.5">
-            <Trophy className="h-4 w-4" />
-            Hackathon Passport API
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Step 1 */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950/60 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-600 text-white font-bold text-xs">
+                1
+              </span>
+              <span className="text-[11px] font-mono text-zinc-400">Step 1</span>
+            </div>
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+              Register OAuth Application
+            </h3>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              Create an OAuth 2.0 client entry to obtain your unique <code className="text-red-500 font-mono">Client ID</code> and <code className="text-red-500 font-mono">Client Secret</code>.
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/admin"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 dark:text-red-400"
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                <span>Open Admin Application Registry &rarr;</span>
+              </Link>
+            </div>
           </div>
-          <p className="text-xs text-zinc-500 mb-3">
-            Devfolio alternative returning complete verified applicant dossiers.
-          </p>
-          <Link
-            href="/passport"
-            className="inline-flex items-center gap-1 font-mono text-xs text-zinc-700 hover:text-emerald-600 dark:text-zinc-300 dark:hover:text-emerald-400 font-medium"
-          >
-            View Live Passport Card <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900 shadow-2xs">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 mb-1.5">
-            <KeyRound className="h-4 w-4" />
-            Mandatory PKCE S256
+          {/* Step 2 */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950/60 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-600 text-white font-bold text-xs">
+                2
+              </span>
+              <span className="text-[11px] font-mono text-zinc-400">Step 2</span>
+            </div>
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+              Configure .env Credentials
+            </h3>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              Add the generated Client ID, Secret, and Redirect URIs into your target application's <code className="text-zinc-700 dark:text-zinc-300 font-mono">.env.local</code>.
+            </p>
+            <div className="pt-2">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500">
+                <Settings className="h-3.5 w-3.5 text-zinc-400" />
+                <span>Use generator below</span>
+              </span>
+            </div>
           </div>
-          <p className="text-xs text-zinc-500 mb-3">
-            Secure code challenge protection for web and mobile clients.
-          </p>
-          <span className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
-            code_challenge_method: S256
-          </span>
+
+          {/* Step 3 */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950/60 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-600 text-white font-bold text-xs">
+                3
+              </span>
+              <span className="text-[11px] font-mono text-zinc-400">Step 3</span>
+            </div>
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+              Fetch Verified Identity
+            </h3>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              Call <code className="text-zinc-700 dark:text-zinc-300 font-mono">/oauth/passport</code> or <code className="text-zinc-700 dark:text-zinc-300 font-mono">/oauth/userinfo</code> to get 1-click hackathon applications & role badges.
+            </p>
+            <div className="pt-2">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>1-Line integration</span>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Code Snippets Box */}
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-950 shadow-xl dark:border-zinc-800 mb-10">
+      {/* Interactive .env Environment Variable Generator */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-2xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+              <Settings className="h-4 w-4 text-red-500" />
+              Interactive .env Config Generator
+            </h2>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Select your application and environment to generate ready-to-paste environment variables.
+            </p>
+          </div>
+
+          {/* App Selector Pills */}
+          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+            <button
+              onClick={() => setSelectedApp("challenges")}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                selectedApp === "challenges"
+                  ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+              }`}
+            >
+              Challenges
+            </button>
+            <button
+              onClick={() => setSelectedApp("builds")}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                selectedApp === "builds"
+                  ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+              }`}
+            >
+              Builds
+            </button>
+            <button
+              onClick={() => setSelectedApp("custom")}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                selectedApp === "custom"
+                  ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+              }`}
+            >
+              Custom App
+            </button>
+          </div>
+        </div>
+
+        {/* Environment Toggle & Custom Fields */}
+        <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-zinc-500 font-medium">Target Environment:</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setEnvironment("prod")}
+                className={`px-2.5 py-1 rounded-lg font-mono text-[11px] font-semibold border ${
+                  environment === "prod"
+                    ? "border-red-500/40 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400"
+                    : "border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
+                }`}
+              >
+                Production (Cloud)
+              </button>
+              <button
+                onClick={() => setEnvironment("local")}
+                className={`px-2.5 py-1 rounded-lg font-mono text-[11px] font-semibold border ${
+                  environment === "local"
+                    ? "border-red-500/40 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400"
+                    : "border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
+                }`}
+              >
+                Local Dev (localhost)
+              </button>
+            </div>
+          </div>
+
+          {selectedApp === "custom" && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-zinc-500 font-medium">Client ID:</span>
+              <input
+                type="text"
+                value={customClientId}
+                onChange={(e) => setCustomClientId(e.target.value)}
+                className="rounded-lg border border-zinc-300 bg-zinc-50 px-2.5 py-1 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Generated .env Code Block */}
+        <div className="relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+          <button
+            onClick={() => copyCode("env", getEnvConfig())}
+            className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-lg bg-zinc-800 px-2.5 py-1 text-[11px] font-medium text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors"
+          >
+            {copiedKey === "env" ? (
+              <>
+                <Check className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400">Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                <span>Copy .env</span>
+              </>
+            )}
+          </button>
+          <pre className="font-mono text-xs text-zinc-300 overflow-x-auto leading-relaxed pt-2">
+            <code>{getEnvConfig()}</code>
+          </pre>
+        </div>
+      </div>
+
+      {/* Code Snippets Playground */}
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-950 shadow-xl dark:border-zinc-800">
         <div className="flex flex-wrap items-center justify-between border-b border-zinc-800 bg-zinc-900/90 px-4 py-2.5">
           <div className="flex items-center gap-1 overflow-x-auto">
             <button
@@ -281,7 +475,7 @@ curl -X GET https://auth.avyantrix.com/api/v1/oauth/passport \\
         </div>
       </div>
 
-      {/* Scopes & Claims Table */}
+      {/* Scopes & Claims Reference */}
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-2xs">
         <h2 className="text-base font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
           <Shield className="h-4 w-4 text-red-500" />
