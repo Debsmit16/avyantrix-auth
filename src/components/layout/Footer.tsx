@@ -14,7 +14,7 @@ export function Footer() {
           </span>
         </div>
 
-        <div className="flex items-center gap-6 text-xs text-zinc-500 dark:text-zinc-400">
+        <div className="flex items-center gap-6 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
           <a
             href="https://www.avyantrix.com"
             target="_blank"
@@ -23,14 +23,12 @@ export function Footer() {
           >
             Avyantrix Home
           </a>
-          <a
-            href="https://www.avyantrix.com/ventures/wrev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-zinc-900 dark:hover:text-white transition-colors"
-          >
-            WRev Platform
-          </a>
+          <Link href="/passport" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
+            Hackathon Passport
+          </Link>
+          <Link href="/developers" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
+            Developer Docs & SSO
+          </Link>
           <Link href="/security" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
             Security Overview
           </Link>
