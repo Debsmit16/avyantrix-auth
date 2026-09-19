@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import {
   Code2,
   Terminal,
@@ -21,17 +22,145 @@ import {
   Settings,
   Lock,
   Cpu,
+  RefreshCw,
+  Trash2,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  Sparkles,
 } from "lucide-react";
 
+interface DeveloperApp {
+  id: string;
+  clientId: string;
+  name: string;
+  redirectUris: string[];
+  allowedOrigins: string[];
+  createdAt: string;
+}
+
 export default function DevelopersPage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"challenges" | "builds" | "nextauth" | "curl">("challenges");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  // Developer Apps State
+  const [apps, setApps] = useState<DeveloperApp[]>([]);
+  const [loadingApps, setLoadingApps] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newAppName, setNewAppName] = useState("");
+  const [newAppRedirectUri, setNewAppRedirectUri] = useState("http://localhost:3000/api/auth/callback");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  // Generated Secret Modal State
+  const [generatedSecretData, setGeneratedSecretData] = useState<{
+    clientId: string;
+    clientSecret: string;
+    name: string;
+  } | null>(null);
+
   // Interactive .env generator state
-  const [selectedApp, setSelectedApp] = useState<"builds" | "challenges" | "custom">("challenges");
+  const [selectedApp, setSelectedApp] = useState<string>("challenges");
   const [environment, setEnvironment] = useState<"prod" | "local">("prod");
-  const [customClientId, setCustomClientId] = useState("my_custom_app");
-  const [customPort, setCustomPort] = useState("3001");
+
+  useEffect(() => {
+    if (user) {
+      loadApps();
+    }
+  }, [user]);
+
+  const loadApps = async () => {
+    setLoadingApps(true);
+    try {
+      const res = await fetch("/api/v1/developer/apps");
+      if (res.ok) {
+        const data = await res.json();
+        setApps(data.apps || []);
+      }
+    } catch (err) {
+      console.error("Error loading developer apps:", err);
+    } finally {
+      setLoadingApps(false);
+    }
+  };
+
+  const handleCreateApp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setCreateError(null);
+
+    try {
+      const uris = newAppRedirectUri
+        .split(",")
+        .map((u) => u.trim())
+        .filter(Boolean);
+
+      const res = await fetch("/api/v1/developer/apps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newAppName,
+          redirectUris: uris,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create application");
+      }
+
+      setGeneratedSecretData({
+        clientId: data.app.clientId,
+        clientSecret: data.clientSecret,
+        name: data.app.name,
+      });
+
+      setShowCreateModal(false);
+      setNewAppName("");
+      setNewAppRedirectUri("http://localhost:3000/api/auth/callback");
+      loadApps();
+    } catch (err) {
+      setCreateError((err as Error).message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteApp = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this OAuth application? Any integrations using this Client ID will immediately stop working.")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/v1/developer/apps/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setApps(apps.filter((a) => a.id !== id));
+      }
+    } catch (err) {
+      alert("Failed to delete application");
+    }
+  };
+
+  const handleRotateSecret = async (id: string, name: string, clientId: string) => {
+    if (!confirm(`Rotate secret for "${name}"? The previous secret will stop working immediately.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/v1/developer/apps/${id}/rotate-secret`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.clientSecret) {
+        setGeneratedSecretData({
+          clientId,
+          clientSecret: data.clientSecret,
+          name,
+        });
+      }
+    } catch (err) {
+      alert("Failed to rotate secret");
+    }
+  };
 
   const copyCode = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -68,15 +197,16 @@ AVYANTRIX_REDIRECT_URI="${redirectUri}"
 AVYANTRIX_SCOPES="openid profile email roles clearances"`;
     }
 
-    return `# Custom Ecosystem App - Environment Variables (.env.local)
+    // Custom app selected from user's apps
+    const userApp = apps.find((a) => a.clientId === selectedApp);
+    const clientId = userApp ? userApp.clientId : selectedApp;
+    const uri = userApp && userApp.redirectUris[0] ? userApp.redirectUris[0] : "http://localhost:3000/api/auth/callback";
+
+    return `# ${userApp ? userApp.name : "Custom App"} - Environment Variables (.env.local)
 NEXT_PUBLIC_AVYANTRIX_ISSUER="https://auth.avyantrix.com"
-AVYANTRIX_CLIENT_ID="${customClientId}"
-AVYANTRIX_CLIENT_SECRET="YOUR_ECOSYSTEM_CLIENT_SECRET"
-AVYANTRIX_REDIRECT_URI="${
-      environment === "prod"
-        ? `https://${customClientId}.avyantrix.com/api/auth/callback`
-        : `http://localhost:${customPort}/api/auth/callback`
-    }"
+AVYANTRIX_CLIENT_ID="${clientId}"
+AVYANTRIX_CLIENT_SECRET="YOUR_GENERATED_CLIENT_SECRET"
+AVYANTRIX_REDIRECT_URI="${uri}"
 AVYANTRIX_SCOPES="openid profile email roles clearances"`;
   };
 
@@ -183,91 +313,273 @@ curl -X GET https://auth.avyantrix.com/api/v1/oauth/passport \\
       <div>
         <div className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 text-xs font-medium text-red-600 dark:text-red-400 mb-3">
           <BookOpen className="h-3.5 w-3.5" />
-          <span>Avyantrix Identity Platform • Developer & Ecosystem Hub</span>
+          <span>Avyantrix Identity Platform • Developer Console</span>
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
-          Ecosystem Single Sign-On (SSO) & Application Integration
+          Developer Applications & SSO API
         </h1>
         <p className="mt-2 text-sm text-zinc-500 max-w-3xl">
-          Complete integration guide and credential manager for connecting <strong className="text-zinc-700 dark:text-zinc-300">Avyantrix Builds</strong>, <strong className="text-zinc-700 dark:text-zinc-300">Avyantrix Challenges</strong>, and future platforms to central identity.
+          Register OAuth applications, generate API keys and client secrets, and connect <strong className="text-zinc-700 dark:text-zinc-300">Avyantrix Builds</strong>, <strong className="text-zinc-700 dark:text-zinc-300">Avyantrix Challenges</strong>, or third-party platforms to Avyantrix ID.
         </p>
       </div>
 
-      {/* 3-Step Quickstart Architecture */}
-      <div className="rounded-3xl border border-zinc-200/80 bg-gradient-to-br from-white via-zinc-50 to-red-50/20 p-6 sm:p-8 dark:border-zinc-800 dark:from-zinc-900 dark:via-zinc-900 dark:to-red-950/20 shadow-xs">
-        <h2 className="text-base font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">
-          <Cpu className="h-5 w-5 text-red-500" />
-          How to Connect Any Avyantrix App in 3 Simple Steps
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Step 1 */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950/60 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-600 text-white font-bold text-xs">
-                1
-              </span>
-              <span className="text-[11px] font-mono text-zinc-400">Step 1</span>
-            </div>
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-              Ecosystem Client Credentials
-            </h3>
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              Official platforms (<strong className="text-zinc-700 dark:text-zinc-300">Builds</strong> & <strong className="text-zinc-700 dark:text-zinc-300">Challenges</strong>) use pre-configured trusted Client IDs. Custom partner apps use public PKCE or provisioned keys.
+      {/* Self-Service OAuth Applications & Keys Management Box */}
+      <div className="rounded-3xl border border-zinc-200/80 bg-white p-6 sm:p-8 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-5">
+          <div>
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-red-500" />
+              My OAuth Applications & API Secrets
+            </h2>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Create and manage client credentials for your web apps, backends, and hackathon portals.
             </p>
-            <div className="pt-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>Pre-configured & Active</span>
-              </span>
-            </div>
           </div>
 
-          {/* Step 2 */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950/60 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-600 text-white font-bold text-xs">
-                2
-              </span>
-              <span className="text-[11px] font-mono text-zinc-400">Step 2</span>
-            </div>
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-              Configure .env Credentials
-            </h3>
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              Add the generated Client ID, Secret, and Redirect URIs into your target application's <code className="text-zinc-700 dark:text-zinc-300 font-mono">.env.local</code>.
-            </p>
-            <div className="pt-2">
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500">
-                <Settings className="h-3.5 w-3.5 text-zinc-400" />
-                <span>Use generator below</span>
-              </span>
-            </div>
-          </div>
+          {user ? (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 shadow-xs transition-colors shrink-0"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>Register New Application</span>
+            </button>
+          ) : (
+            <Link
+              href="/login?redirect=/developers"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-950 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 shadow-xs transition-colors shrink-0"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              <span>Sign In to Generate Keys</span>
+            </Link>
+          )}
+        </div>
 
-          {/* Step 3 */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950/60 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-red-600 text-white font-bold text-xs">
-                3
-              </span>
-              <span className="text-[11px] font-mono text-zinc-400">Step 3</span>
-            </div>
+        {/* User Application List */}
+        {user ? (
+          <div>
+            {loadingApps ? (
+              <div className="py-8 text-center text-xs text-zinc-500">Loading your registered apps...</div>
+            ) : apps.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center dark:border-zinc-800">
+                <Shield className="mx-auto h-8 w-8 text-zinc-400 mb-2" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                  No Applications Registered Yet
+                </h3>
+                <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                  Register your first OAuth client to generate a Client ID and Secret for your app or hackathon integration.
+                </p>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:underline"
+                >
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  <span>Register Application Now</span>
+                </button>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {apps.map((app) => (
+                  <div key={app.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-zinc-900 dark:text-white">{app.name}</span>
+                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[10px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                          {app.clientId}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 font-mono">
+                        Redirects: {app.redirectUris.join(", ")}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => copyCode(app.clientId, app.clientId)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copiedKey === app.clientId ? "ID Copied" : "Copy Client ID"}
+                      </button>
+                      <button
+                        onClick={() => handleRotateSecret(app.id, app.name, app.clientId)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                        title="Rotate Client Secret"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        <span>Rotate Secret</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteApp(app.id)}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                        title="Delete Application"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 p-6 text-center border border-zinc-100 dark:border-zinc-800">
+            <KeyRound className="mx-auto h-7 w-7 text-red-500 mb-2" />
             <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-              Fetch Verified Identity
+              Developer Self-Service Portal
             </h3>
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              Call <code className="text-zinc-700 dark:text-zinc-300 font-mono">/oauth/passport</code> or <code className="text-zinc-700 dark:text-zinc-300 font-mono">/oauth/userinfo</code> to get 1-click hackathon applications & role badges.
+            <p className="text-xs text-zinc-500 mt-1 max-w-md mx-auto">
+              Sign in with your Avyantrix ID to register applications, generate client secrets, and test OAuth 2.0 PKCE authentication.
             </p>
-            <div className="pt-2">
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>1-Line integration</span>
+          </div>
+        )}
+      </div>
+
+      {/* Generated Secret Modal (Displayed Once on Creation or Rotation) */}
+      {generatedSecretData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-3xl border border-emerald-500/30 bg-white p-6 shadow-2xl dark:bg-zinc-900 dark:border-emerald-500/30 space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shrink-0">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                  Client Credentials Generated!
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  {generatedSecretData.name}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+              <span>
+                <strong>Important:</strong> Please copy your Client Secret now. For security, we do not store raw secrets and you won't be able to see it again!
               </span>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                  Client ID
+                </label>
+                <div className="mt-1 flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 p-2.5 font-mono text-xs text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
+                  <span>{generatedSecretData.clientId}</span>
+                  <button
+                    onClick={() => copyCode("modal_id", generatedSecretData.clientId)}
+                    className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white"
+                  >
+                    {copiedKey === "modal_id" ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                  Client Secret (Copy Now)
+                </label>
+                <div className="mt-1 flex items-center justify-between rounded-xl border border-red-200 bg-red-50/40 p-2.5 font-mono text-xs text-red-900 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+                  <span className="break-all">{generatedSecretData.clientSecret}</span>
+                  <button
+                    onClick={() => copyCode("modal_secret", generatedSecretData.clientSecret)}
+                    className="ml-2 text-red-500 hover:text-red-700 shrink-0"
+                  >
+                    {copiedKey === "modal_secret" ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setGeneratedSecretData(null)}
+                className="rounded-xl bg-zinc-900 px-5 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 transition-colors"
+              >
+                I have saved my secret securely
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Register App Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <form
+            onSubmit={handleCreateApp}
+            className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl dark:bg-zinc-900 dark:border-zinc-800 space-y-4 animate-in fade-in zoom-in duration-150"
+          >
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3 dark:border-zinc-800">
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                Register New OAuth App
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="text-xs text-zinc-400 hover:text-zinc-600"
+              >
+                Cancel
+              </button>
+            </div>
+
+            {createError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-600 dark:border-red-900/40 dark:bg-red-950/30">
+                {createError}
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Application Name
+              </label>
+              <input
+                type="text"
+                required
+                value={newAppName}
+                onChange={(e) => setNewAppName(e.target.value)}
+                placeholder="e.g. Stanford Hackathon 2026 Portal"
+                className="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs text-zinc-900 shadow-2xs focus:border-red-500 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Callback / Redirect URIs (comma-separated)
+              </label>
+              <input
+                type="text"
+                required
+                value={newAppRedirectUri}
+                onChange={(e) => setNewAppRedirectUri(e.target.value)}
+                placeholder="http://localhost:3000/api/auth/callback, https://myapp.com/callback"
+                className="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 font-mono text-xs text-zinc-900 shadow-2xs focus:border-red-500 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              />
+              <p className="mt-1 text-[11px] text-zinc-400">
+                Must be an exact URL match where your app receives OAuth codes.
+              </p>
+            </div>
+
+            <div className="pt-3 flex items-center justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-xl border border-zinc-200 px-4 py-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isSubmitting ? "Generating Keys..." : "Generate Client ID & Secret"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Interactive .env Environment Variable Generator */}
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-2xs space-y-5">
@@ -278,12 +590,12 @@ curl -X GET https://auth.avyantrix.com/api/v1/oauth/passport \\
               Interactive .env Config Generator
             </h2>
             <p className="text-xs text-zinc-500 mt-0.5">
-              Select your application and environment to generate ready-to-paste environment variables.
+              Select your registered app or ecosystem target to generate ready-to-paste environment variables.
             </p>
           </div>
 
           {/* App Selector Pills */}
-          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl flex-wrap">
             <button
               onClick={() => setSelectedApp("challenges")}
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
@@ -304,20 +616,23 @@ curl -X GET https://auth.avyantrix.com/api/v1/oauth/passport \\
             >
               Builds
             </button>
-            <button
-              onClick={() => setSelectedApp("custom")}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                selectedApp === "custom"
-                  ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-            >
-              Custom App
-            </button>
+            {apps.map((app) => (
+              <button
+                key={app.id}
+                onClick={() => setSelectedApp(app.clientId)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                  selectedApp === app.clientId
+                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                {app.name}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Environment Toggle & Custom Fields */}
+        {/* Environment Toggle */}
         <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-2 text-xs">
             <span className="text-zinc-500 font-medium">Target Environment:</span>
@@ -344,18 +659,6 @@ curl -X GET https://auth.avyantrix.com/api/v1/oauth/passport \\
               </button>
             </div>
           </div>
-
-          {selectedApp === "custom" && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-zinc-500 font-medium">Client ID:</span>
-              <input
-                type="text"
-                value={customClientId}
-                onChange={(e) => setCustomClientId(e.target.value)}
-                className="rounded-lg border border-zinc-300 bg-zinc-50 px-2.5 py-1 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-              />
-            </div>
-          )}
         </div>
 
         {/* Generated .env Code Block */}
@@ -469,53 +772,6 @@ curl -X GET https://auth.avyantrix.com/api/v1/oauth/passport \\
               {activeTab === "curl" && curlSnippet}
             </code>
           </pre>
-        </div>
-      </div>
-
-      {/* Scopes & Claims Reference */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-2xs">
-        <h2 className="text-base font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
-          <Shield className="h-4 w-4 text-red-500" />
-          OAuth 2.0 Scopes & Claims Reference
-        </h2>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-400 uppercase tracking-wider font-semibold">
-                <th className="pb-3 pr-4">Scope</th>
-                <th className="pb-3 pr-4">Description</th>
-                <th className="pb-3">Returned Payload Claims</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-zinc-600 dark:text-zinc-300">
-              <tr>
-                <td className="py-3 pr-4 font-mono font-bold text-red-600 dark:text-red-400">openid</td>
-                <td className="py-3 pr-4">Standard OpenID Connect subject ID</td>
-                <td className="py-3 font-mono text-[11px]">sub, iss, aud, exp, iat</td>
-              </tr>
-              <tr>
-                <td className="py-3 pr-4 font-mono font-bold text-red-600 dark:text-red-400">profile</td>
-                <td className="py-3 pr-4">Full name, username, bio, and avatar</td>
-                <td className="py-3 font-mono text-[11px]">name, given_name, family_name, preferred_username, picture, headline</td>
-              </tr>
-              <tr>
-                <td className="py-3 pr-4 font-mono font-bold text-red-600 dark:text-red-400">email</td>
-                <td className="py-3 pr-4">Primary email & verification status</td>
-                <td className="py-3 font-mono text-[11px]">email, email_verified</td>
-              </tr>
-              <tr>
-                <td className="py-3 pr-4 font-mono font-bold text-red-600 dark:text-red-400">roles</td>
-                <td className="py-3 pr-4">Assigned ecosystem clearance roles</td>
-                <td className="py-3 font-mono text-[11px]">roles: ["BUILDER", "PROBLEM_OWNER", ...]</td>
-              </tr>
-              <tr>
-                <td className="py-3 pr-4 font-mono font-bold text-red-600 dark:text-red-400">clearances</td>
-                <td className="py-3 pr-4">Active verification badges & certifications</td>
-                <td className="py-3 font-mono text-[11px]">badges: [&#123; category, badgeLabel, issuedAt &#125;]</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

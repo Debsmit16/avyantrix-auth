@@ -45,7 +45,10 @@ export interface LogSecurityParams {
     | "2FA_DISABLED"
     | "2FA_CHALLENGE_PASSED"
     | "ACCOUNT_SUSPENDED"
-    | "ACCOUNT_DELETED";
+    | "ACCOUNT_DELETED"
+    | "DEVELOPER_APP_CREATED"
+    | "DEVELOPER_APP_DELETED"
+    | "DEVELOPER_APP_SECRET_ROTATED";
   ipAddress?: string;
   metadata?: Record<string, any>;
 }

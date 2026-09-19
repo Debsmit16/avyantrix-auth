@@ -67,6 +67,7 @@ model User {
   loginEvents          LoginEvent[]
   securityEvents       SecurityEvent[]
   oauthRefreshTokens   OAuthRefreshToken[]
+  ownedOAuthClients    OAuthClient[]
 
   @@index([email])
   @@index([status])
@@ -320,12 +321,15 @@ model OAuthClient {
   redirectUris       String[]            // e.g. ["https://builds.avyantrix.com/api/auth/callback"]
   allowedOrigins     String[]            // e.g. ["https://builds.avyantrix.com"]
   isFirstParty       Boolean             @default(true)
+  ownerUserId        String?             @db.Uuid
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
+  ownerUser          User?               @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
   authorizationCodes AuthorizationCode[]
   refreshTokens      OAuthRefreshToken[]
 
+  @@index([ownerUserId])
   @@map("oauth_clients")
 }
 

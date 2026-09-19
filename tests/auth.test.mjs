@@ -806,3 +806,30 @@ test("Ecosystem 1-Click Application extract handles missing fields gracefully", 
   assert.deepEqual(extracted.skills, ["Python", "Next.js"]);
   assert.equal(extracted.fastPass, true);
 });
+
+// 23. Test Developer App Client Secret Generation, Formatting & Argon2id Hashing
+test("Developer client secret generation produces valid entropy and Argon2id hashes", async () => {
+  function generateDeveloperCredentials() {
+    const clientId = `app_${crypto.randomBytes(8).toString("hex")}`;
+    const rawSecret = `avy_sec_${crypto.randomBytes(24).toString("hex")}`;
+    return { clientId, rawSecret };
+  }
+
+  const { clientId, rawSecret } = generateDeveloperCredentials();
+
+  assert.match(clientId, /^app_[a-f0-9]{16}$/, "Client ID must match app_ prefix and 16 hex chars");
+  assert.match(rawSecret, /^avy_sec_[a-f0-9]{48}$/, "Client Secret must match avy_sec_ prefix and 48 hex chars");
+
+  const secretHash = await hash(rawSecret, {
+    algorithm: Algorithm.Argon2id,
+    version: Version.V0x13,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 1,
+    outputLen: 32,
+  });
+
+  assert.ok(secretHash.startsWith("$argon2id$"), "Secret hash must use Argon2id");
+  const isValid = await verify(secretHash, rawSecret, { algorithm: Algorithm.Argon2id });
+  assert.equal(isValid, true, "Generated secret must verify against Argon2id hash");
+});
