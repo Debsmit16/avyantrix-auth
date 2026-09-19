@@ -393,32 +393,31 @@ export default function PassportPage() {
         </div>
       </div>
 
-      {/* Developer API & Hackathon Integration Box */}
+      {/* Avyantrix Challenges 1-Click Fast Pass Info Card */}
       <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-2xs">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Terminal className="h-5 w-5 text-red-500" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shrink-0">
+              <Zap className="h-5 w-5" />
+            </div>
             <div>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-                Developers & Hackathon Organizers API
+                1-Click Fast Pass for Avyantrix Challenges
               </h3>
-              <p className="text-xs text-zinc-500">
-                Fetch this applicant payload via OAuth 2.0 / OIDC Bearer tokens on Avyantrix Challenges.
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Your verified education, engineering skills, and clearance badges auto-sync when applying to hackathons.
               </p>
             </div>
           </div>
-          <Link
-            href="/developers"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 dark:text-red-400"
+          <a
+            href="https://challenges.avyantrix.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-zinc-950 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 shadow-xs transition-colors shrink-0"
           >
-            Integration Docs <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        <div className="mt-4 rounded-xl bg-zinc-950 p-3.5 font-mono text-xs text-zinc-300 overflow-x-auto">
-          <code>
-            GET /api/v1/oauth/passport <span className="text-zinc-500"># Authorization: Bearer &#123;access_token&#125;</span>
-          </code>
+            <span>Explore Hackathons</span>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
         </div>
       </div>
     </div>
