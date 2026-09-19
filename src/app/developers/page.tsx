@@ -48,7 +48,7 @@ export default function DevelopersPage() {
       return `# Avyantrix Builds - Environment Variables (.env.local)
 NEXT_PUBLIC_AVYANTRIX_ISSUER="https://auth.avyantrix.com"
 AVYANTRIX_CLIENT_ID="avyantrix_builds"
-AVYANTRIX_CLIENT_SECRET="YOUR_CLIENT_SECRET_FROM_ADMIN_CONSOLE"
+AVYANTRIX_CLIENT_SECRET="YOUR_ECOSYSTEM_CLIENT_SECRET"
 NEXTAUTH_URL="${environment === "prod" ? "https://builds.avyantrix.com" : "http://localhost:3001"}"
 AVYANTRIX_REDIRECT_URI="${redirectUri}"
 AVYANTRIX_SCOPES="openid profile email roles clearances"`;
@@ -62,7 +62,7 @@ AVYANTRIX_SCOPES="openid profile email roles clearances"`;
       return `# Avyantrix Challenges - Environment Variables (.env.local)
 NEXT_PUBLIC_AVYANTRIX_ISSUER="https://auth.avyantrix.com"
 AVYANTRIX_CLIENT_ID="avyantrix_challenges"
-AVYANTRIX_CLIENT_SECRET="YOUR_CLIENT_SECRET_FROM_ADMIN_CONSOLE"
+AVYANTRIX_CLIENT_SECRET="YOUR_ECOSYSTEM_CLIENT_SECRET"
 NEXTAUTH_URL="${environment === "prod" ? "https://challenges.avyantrix.com" : "http://localhost:3002"}"
 AVYANTRIX_REDIRECT_URI="${redirectUri}"
 AVYANTRIX_SCOPES="openid profile email roles clearances"`;
@@ -71,7 +71,7 @@ AVYANTRIX_SCOPES="openid profile email roles clearances"`;
     return `# Custom Ecosystem App - Environment Variables (.env.local)
 NEXT_PUBLIC_AVYANTRIX_ISSUER="https://auth.avyantrix.com"
 AVYANTRIX_CLIENT_ID="${customClientId}"
-AVYANTRIX_CLIENT_SECRET="YOUR_CLIENT_SECRET_FROM_ADMIN_CONSOLE"
+AVYANTRIX_CLIENT_SECRET="YOUR_ECOSYSTEM_CLIENT_SECRET"
 AVYANTRIX_REDIRECT_URI="${
       environment === "prod"
         ? `https://${customClientId}.avyantrix.com/api/auth/callback`
@@ -210,19 +210,16 @@ curl -X GET https://auth.avyantrix.com/api/v1/oauth/passport \\
               <span className="text-[11px] font-mono text-zinc-400">Step 1</span>
             </div>
             <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-              Register OAuth Application
+              Ecosystem Client Credentials
             </h3>
             <p className="text-xs text-zinc-500 leading-relaxed">
-              Create an OAuth 2.0 client entry to obtain your unique <code className="text-red-500 font-mono">Client ID</code> and <code className="text-red-500 font-mono">Client Secret</code>.
+              Official platforms (<strong className="text-zinc-700 dark:text-zinc-300">Builds</strong> & <strong className="text-zinc-700 dark:text-zinc-300">Challenges</strong>) use pre-configured trusted Client IDs. Custom partner apps use public PKCE or provisioned keys.
             </p>
             <div className="pt-2">
-              <Link
-                href="/admin"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 dark:text-red-400"
-              >
-                <PlusCircle className="h-3.5 w-3.5" />
-                <span>Open Admin Application Registry &rarr;</span>
-              </Link>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Pre-configured & Active</span>
+              </span>
             </div>
           </div>
 
