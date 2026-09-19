@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -14,13 +13,20 @@ import {
   ExternalLink,
   Menu,
   X,
+  LayoutGrid,
+  Layers,
+  Trophy,
+  Globe,
+  Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export function Navbar() {
   const { user, loading, logout, hasRole } = useAuth();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [appSwitcherOpen, setAppSwitcherOpen] = useState(false);
+  const switcherRef = useRef<HTMLDivElement>(null);
 
   const navLinks = [
     { href: "/dashboard", label: "Avyantrix ID", icon: Shield, authRequired: true },
@@ -38,6 +44,57 @@ export function Navbar() {
     pathname === "/register" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password";
+
+  // Close app switcher on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (switcherRef.current && !switcherRef.current.contains(event.target as Node)) {
+        setAppSwitcherOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const ecosystemApps = [
+    {
+      name: "Avyantrix Builds",
+      tagline: "Industry Problem Solving & Bounties",
+      href: "https://builds.avyantrix.com",
+      icon: Layers,
+      color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+      badge: "Problem Solving",
+      badgeColor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50",
+    },
+    {
+      name: "Avyantrix Challenges",
+      tagline: "Hackathons, Arena & Competitions",
+      href: "https://challenges.avyantrix.com",
+      icon: Trophy,
+      color: "text-amber-500 bg-amber-500/10 border-amber-500/20",
+      badge: "Hackathons",
+      badgeColor: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-900/50",
+    },
+    {
+      name: "Avyantrix ID",
+      tagline: "Central Identity & Security Passport",
+      href: "/dashboard",
+      icon: Shield,
+      color: "text-red-500 bg-red-500/10 border-red-500/20",
+      badge: "Active",
+      badgeColor: "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border-red-200 dark:border-red-900/50",
+      isInternal: true,
+    },
+    {
+      name: "Avyantrix Collective",
+      tagline: "Official Homepage & Research Portal",
+      href: "https://www.avyantrix.com",
+      icon: Globe,
+      color: "text-blue-500 bg-blue-500/10 border-blue-500/20",
+      badge: "Portal",
+      badgeColor: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-900/50",
+    },
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200/80 bg-white/80 backdrop-blur-md dark:border-zinc-800/80 dark:bg-[#09090B]/80 transition-all">
@@ -89,15 +146,81 @@ export function Navbar() {
 
         {/* Right Action Controls */}
         <div className="flex items-center gap-3">
-          {/* Main Website Link */}
-          <a
-            href="https://www.avyantrix.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
-          >
-            avyantrix.com <ExternalLink className="h-3 w-3" />
-          </a>
+          {/* Ecosystem Product Switcher (9-dots icon) */}
+          <div className="relative" ref={switcherRef}>
+            <button
+              onClick={() => setAppSwitcherOpen(!appSwitcherOpen)}
+              title="Avyantrix Ecosystem Products"
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all ${
+                appSwitcherOpen
+                  ? "border-red-500/40 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400"
+                  : "border-zinc-200/80 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+
+            {/* Dropdown Menu */}
+            {appSwitcherOpen && (
+              <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-zinc-200/90 bg-white/95 p-3 shadow-xl backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/95 animate-in fade-in slide-in-from-top-2 z-50">
+                <div className="flex items-center justify-between px-2 py-1.5 mb-1.5 border-b border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-red-500" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+                      Avyantrix Ecosystem
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-400">Single Sign-On</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {ecosystemApps.map((app) => {
+                    const Icon = app.icon;
+                    const content = (
+                      <div className="flex items-start gap-3 rounded-xl p-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors group">
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${app.color}`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-zinc-900 dark:text-white group-hover:text-red-500 transition-colors truncate">
+                              {app.name}
+                            </span>
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${app.badgeColor}`}>
+                              {app.badge}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                            {app.tagline}
+                          </p>
+                        </div>
+                      </div>
+                    );
+
+                    return app.isInternal ? (
+                      <Link
+                        key={app.name}
+                        href={app.href}
+                        onClick={() => setAppSwitcherOpen(false)}
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <a
+                        key={app.name}
+                        href={app.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setAppSwitcherOpen(false)}
+                      >
+                        {content}
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {!loading && (
             <>

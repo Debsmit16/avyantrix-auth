@@ -390,6 +390,121 @@ function DashboardContent() {
         );
       })()}
 
+      {/* Avyantrix Ecosystem Hub: Connected Portals */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-red-500" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+              Connected Avyantrix Ecosystem Portals
+            </h2>
+          </div>
+          <span className="text-[11px] text-zinc-500">
+            Universal SSO Single Sign-On Active
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Avyantrix Builds Portal Card */}
+          <div className="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 transition-all hover:border-emerald-500/50 group">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-emerald-500 transition-colors">
+                      Avyantrix Builds
+                    </h3>
+                    <span className="rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                      Connected
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Industry Problem Solving & Bounty Arena
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-5 leading-relaxed">
+              Solve real-world deep-tech problem briefs posted by enterprises, submit architectural solution decks, and earn verified industry bounties.
+            </p>
+
+            <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800 text-xs">
+              <div className="flex items-center gap-1.5 text-zinc-500">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                <span>
+                  {hasProblemOwnerBadge
+                    ? "Problem Owner Clearance Active"
+                    : hasBuilderBadge
+                    ? "Verified Builder Clearance Active"
+                    : "Universal ID Linked"}
+                </span>
+              </div>
+              <a
+                href="https://builds.avyantrix.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+              >
+                <span>Launch Builds</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
+
+          {/* Avyantrix Challenges Portal Card */}
+          <div className="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 transition-all hover:border-amber-500/50 group">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <Trophy className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-amber-500 transition-colors">
+                      Avyantrix Challenges
+                    </h3>
+                    <span className="rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                      Connected
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Next-Gen Hackathon & Competition Platform
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-5 leading-relaxed">
+              1-Click apply to national hackathons with your Avyantrix ID passport, form cross-domain teams, submit project builds, and compete for prize pools.
+            </p>
+
+            <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800 text-xs">
+              <div className="flex items-center gap-1.5 text-zinc-500">
+                <CheckCircle2 className="h-3.5 w-3.5 text-amber-500" />
+                <span>
+                  {hasOrganizerBadge
+                    ? "Organizer & Host Clearance Active"
+                    : "1-Click Hackathon Passport Ready"}
+                </span>
+              </div>
+              <a
+                href="https://challenges.avyantrix.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400 hover:underline"
+              >
+                <span>Explore Challenges</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Enterprise Role Cockpit Switcher */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
