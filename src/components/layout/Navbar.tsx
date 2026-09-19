@@ -18,6 +18,8 @@ import {
   Trophy,
   Globe,
   Sparkles,
+  Zap,
+  Code2,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -30,9 +32,11 @@ export function Navbar() {
 
   const navLinks = [
     { href: "/dashboard", label: "Avyantrix ID", icon: Shield, authRequired: true },
+    { href: "/passport", label: "Passport", icon: Zap, authRequired: true },
     { href: "/profile", label: "Profile", icon: User, authRequired: true },
     { href: "/security", label: "Security & Sessions", icon: KeyRound, authRequired: true },
     { href: "/verification", label: "Verification Hub", icon: CheckCircle2, authRequired: true },
+    { href: "/developers", label: "Developers", icon: Code2, authRequired: false },
   ];
 
   if (hasRole("ADMIN")) {
@@ -76,8 +80,28 @@ export function Navbar() {
       badgeColor: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-900/50",
     },
     {
+      name: "Hackathon Passport",
+      tagline: "1-Click Devfolio-Alternative Dossier",
+      href: "/passport",
+      icon: Zap,
+      color: "text-red-500 bg-red-500/10 border-red-500/20",
+      badge: "Fast Pass",
+      badgeColor: "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border-red-200 dark:border-red-900/50",
+      isInternal: true,
+    },
+    {
+      name: "Developer Hub & SSO",
+      tagline: "OIDC & OAuth 2.0 PKCE SDK Guides",
+      href: "/developers",
+      icon: Code2,
+      color: "text-purple-500 bg-purple-500/10 border-purple-500/20",
+      badge: "Docs",
+      badgeColor: "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400 border-purple-200 dark:border-purple-900/50",
+      isInternal: true,
+    },
+    {
       name: "Avyantrix ID",
-      tagline: "Central Identity & Security Passport",
+      tagline: "Central Identity & Security Engine",
       href: "/dashboard",
       icon: Shield,
       color: "text-red-500 bg-red-500/10 border-red-500/20",

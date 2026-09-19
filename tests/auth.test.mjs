@@ -718,6 +718,91 @@ test("OAuth registration generates clean handles and evades reserved keyword col
   assert.equal(handle3, "debsmit_1");
 });
 
+// 21. Test Fast Hackathon Passport Payload Generation & Verification Claims
+test("Fast Hackathon Passport payload generates valid applicant dossier and clearances", () => {
+  function buildPassportPayload(mockUser) {
+    const isEducationVerified = mockUser.badges.some((b) => b.category === "EDUCATION");
+    const isBuilderVerified = mockUser.badges.some((b) => b.category === "CAPABILITY_BUILDER");
+    const isChallengeOrganizer = mockUser.roles.includes("CHALLENGE_ORGANIZER");
 
+    return {
+      passport_id: `AVY-PASS-${mockUser.id.substring(0, 8).toUpperCase()}`,
+      passport_version: "2026.1",
+      user: {
+        id: mockUser.id,
+        username: mockUser.username,
+        full_name: `${mockUser.firstName} ${mockUser.lastName}`.trim(),
+        email: mockUser.email,
+        email_verified: mockUser.emailVerified,
+      },
+      education: {
+        institution: mockUser.college,
+        graduation_year: mockUser.gradYear,
+        is_verified: isEducationVerified,
+      },
+      developer_links: mockUser.links,
+      skills: mockUser.skills,
+      clearances: {
+        roles: mockUser.roles,
+        is_builder_verified: isBuilderVerified,
+        is_challenge_organizer: isChallengeOrganizer,
+      },
+      ecosystem_pass: {
+        challenges_fast_pass: true,
+        builds_bounty_eligible: isBuilderVerified || mockUser.roles.includes("BUILDER"),
+      },
+    };
+  }
 
+  const mockUser = {
+    id: "12345678-abcd-ef01-2345-6789abcdef01",
+    username: "alexbuilder",
+    firstName: "Alex",
+    lastName: "Vance",
+    email: "alex@avyantrix.com",
+    emailVerified: true,
+    college: "Stanford University",
+    gradYear: 2026,
+    links: { github: "https://github.com/alexvance", linkedin: "https://linkedin.com/in/alexvance" },
+    skills: [{ name: "Rust", category: "Systems", proficiency: "EXPERT" }],
+    roles: ["BUILDER", "CHALLENGE_ORGANIZER"],
+    badges: [{ category: "CAPABILITY_BUILDER", badgeLabel: "Verified Builder" }],
+  };
 
+  const passport = buildPassportPayload(mockUser);
+  assert.equal(passport.passport_id, "AVY-PASS-12345678");
+  assert.equal(passport.user.full_name, "Alex Vance");
+  assert.equal(passport.education.institution, "Stanford University");
+  assert.equal(passport.clearances.is_builder_verified, true);
+  assert.equal(passport.clearances.is_challenge_organizer, true);
+  assert.equal(passport.ecosystem_pass.challenges_fast_pass, true);
+});
+
+// 22. Test Ecosystem 1-Click Application Claim Extraction
+test("Ecosystem 1-Click Application extract handles missing fields gracefully", () => {
+  function extractApplicationFields(passport) {
+    return {
+      name: passport?.user?.full_name || "",
+      email: passport?.user?.email || "",
+      verified: Boolean(passport?.user?.email_verified),
+      institution: passport?.education?.institution || "Independent",
+      skills: (passport?.skills || []).map((s) => s.name),
+      github: passport?.developer_links?.github || null,
+      fastPass: Boolean(passport?.ecosystem_pass?.challenges_fast_pass),
+    };
+  }
+
+  const extracted = extractApplicationFields({
+    user: { full_name: "John Doe", email: "john@example.com", email_verified: true },
+    education: { institution: "MIT" },
+    skills: [{ name: "Python" }, { name: "Next.js" }],
+    developer_links: { github: "https://github.com/johndoe" },
+    ecosystem_pass: { challenges_fast_pass: true },
+  });
+
+  assert.equal(extracted.name, "John Doe");
+  assert.equal(extracted.verified, true);
+  assert.equal(extracted.institution, "MIT");
+  assert.deepEqual(extracted.skills, ["Python", "Next.js"]);
+  assert.equal(extracted.fastPass, true);
+});
