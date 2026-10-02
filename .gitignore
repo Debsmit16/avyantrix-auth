@@ -30,6 +30,7 @@ pnpm-debug.log*
 
 # vercel
 .vercel
+scripts/pdf_previews/
 
 # typescript
 *.tsbuildinfo
